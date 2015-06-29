@@ -39,7 +39,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CsvParser.cs" />
+    <Compile Include="Csv\CsvConvert.cs" />
+    <Compile Include="Csv\CsvParser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Reflection\clsColumnInfo.cs" />
     <Compile Include="Reflection\clsTypeInfo.cs" />
