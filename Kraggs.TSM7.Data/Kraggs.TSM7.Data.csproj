@@ -41,6 +41,16 @@
   <ItemGroup>
     <Compile Include="CsvParser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Reflection\clsColumnInfo.cs" />
+    <Compile Include="Reflection\clsTypeInfo.cs" />
+    <Compile Include="Reflection\Reflection.cs" />
+    <Compile Include="Reflection\Reflection_Cache.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Kraggs.TSM7.Attributes\Kraggs.TSM7.Attributes.csproj">
+      <Project>{a4396b49-e23b-476a-9d64-2d001526e05e}</Project>
+      <Name>Kraggs.TSM7.Attributes</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
