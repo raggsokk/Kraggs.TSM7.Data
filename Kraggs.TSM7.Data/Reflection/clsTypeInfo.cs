@@ -25,7 +25,7 @@ namespace Kraggs.TSM7.Data
     /// Contains data for a type.
     /// </summary>
     [DebuggerDisplay("{TableName}")]
-    public class clsTypeInfo
+    internal class clsTypeInfo
     {
         /// <summary>
         /// Name of type

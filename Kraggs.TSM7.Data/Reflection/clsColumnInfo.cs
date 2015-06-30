@@ -24,7 +24,7 @@ namespace Kraggs.TSM7.Data
     /// Represents a single property or field.
     /// </summary>
     [DebuggerDisplay("{ColumnName} : {DataType}")]
-    public class clsColumnInfo
+    internal class clsColumnInfo
     {
         /// <summary>
         /// Name of sql column to use in queries.
