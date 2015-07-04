@@ -21,6 +21,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using System.Globalization;
+
 namespace Kraggs.TSM7.Data
 {
     //TODO: Merge Convert & ConvertUnsafe since they are almost equal.
@@ -49,6 +51,12 @@ namespace Kraggs.TSM7.Data
                     object oset = null;
 
                     var flagNull = value.Length == 0;
+                    if (flagNull) //UBER fancy null type handler.
+                    {
+                        i++;
+                        continue;
+                    }
+
 
                     //TODO: Handle null values from TSM.
                     //TODO: Handle nullable types in T.
@@ -64,10 +72,28 @@ namespace Kraggs.TSM7.Data
                         case TSMDataType.Long:
                             oset = long.Parse(value); break;
                         case TSMDataType.Double:
-                            oset = double.Parse(value); break;
+                            //oset = double.Parse(value, CultureInfo.InvariantCulture); break;
+                            //oset = double.Parse(value); break;
+                            oset = ParseDB2Double(value); break;
                         case TSMDataType.Float:
-                            //oset = float.Parse(v, CultureInfo.InvariantCulture, CultureInfo.InvariantCulture )
-                            oset = float.Parse(value); break;
+                            //TODO: Check for "." in value to handle all cases?
+                            oset = float.Parse(value, CultureInfo.InvariantCulture); break;                            
+                            //oset = float.Parse(value); break;
+                        case TSMDataType.Bool:
+                            {
+                                var toupper = value.ToUpperInvariant();
+                                if (toupper == "YES" || toupper == "TRUE")
+                                    oset = true;
+                                else
+                                    oset = false;
+                            } break;
+                        case TSMDataType.DateTime:
+                            oset = DateTime.Parse(value); break;
+                        case TSMDataType.Guid:
+                            {
+                                var guid = value.Replace(".", "");
+                                oset = Guid.Parse(guid);
+                            } break;
                         default:
                             throw new NotImplementedException();
                     }
@@ -101,6 +127,14 @@ namespace Kraggs.TSM7.Data
                         break;
                     clsColumnInfo column = arrColumns[i++];
 
+                    
+                    var flagNull = v.Length == 0;
+                    if (flagNull) // Uber Fance null handling.
+                    {
+                        i++;
+                        continue;
+                    }
+
                     object oset = null;
 
                     switch (column.DataType)
@@ -114,10 +148,41 @@ namespace Kraggs.TSM7.Data
                         case TSMDataType.Long:
                             oset = long.Parse(v); break;
                         case TSMDataType.Double:
-                            oset = double.Parse(v); break;
+                            //var E = v.IndexOf('E');
+                            //if (E != -1)
+                            //{
+                            //    var d = double.Parse(v.Substring(0, E), CultureInfo.InvariantCulture);
+                            //    var multiplier = int.Parse(v.Substring(E + 2));
+
+                            //    if (v[E + 1] == '+')
+                            //        oset = d * Math.Pow(10, multiplier);
+                            //    else if (v[E + 1] == '-')
+                            //        oset = d / Math.Pow(10, multiplier);
+                            //    else
+                            //        throw new NotImplementedException();
+                            //}
+                            //else
+                            //    oset = double.Parse(v, CultureInfo.InvariantCulture);
+                            oset = ParseDB2Double(v);
+                            break;
                         case TSMDataType.Float:
                             //oset = float.Parse(v, CultureInfo.InvariantCulture, CultureInfo.InvariantCulture )
                             oset = float.Parse(v); break;
+                        case TSMDataType.Bool:
+                            {
+                                var toupper = v.ToUpperInvariant();
+                                if (toupper == "YES" || toupper == "TRUE")
+                                    oset = true;
+                                else
+                                    oset = false;
+                            }break;
+                        case TSMDataType.DateTime:
+                            oset = DateTime.Parse(v); break;
+                        case TSMDataType.Guid:
+                            {
+                                var guid = v.Replace(".", "");
+                                oset = Guid.Parse(guid);
+                            } break;
                         default:
                             throw new NotImplementedException();
                     }
@@ -133,5 +198,24 @@ namespace Kraggs.TSM7.Data
             return result;
         }
 
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        private static double ParseDB2Double(string value)
+        {
+            var E = value.IndexOf('E');
+            if (E != -1)
+            {
+                var d = double.Parse(value.Substring(0, E), CultureInfo.InvariantCulture);
+                var multiplier = int.Parse(value.Substring(E + 2));
+
+                if (value[E + 1] == '+')
+                    return d * Math.Pow(10, multiplier);
+                else if (value[E + 1] == '-')
+                    return d / Math.Pow(10, multiplier);
+                else
+                    throw new NotImplementedException();
+            }
+            else
+                return double.Parse(value, CultureInfo.InvariantCulture);           
+        }
     }
 }

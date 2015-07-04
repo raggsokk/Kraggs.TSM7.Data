@@ -116,6 +116,11 @@ namespace Kraggs.TSM7.Data
                 cT.SetValue = CreateSetProperty(p);
                 cT.DataType = GetTSMDataType(p.PropertyType);
 
+                //is nullable
+                if (cT.MemberType.IsGenericType &&
+                    cT.MemberType.GetGenericTypeDefinition() == typeof(Nullable))
+                        cT.IsNullable = true;                
+
                 myType.Add(cT);
             }
 
@@ -141,6 +146,8 @@ namespace Kraggs.TSM7.Data
                 return TSMDataType.DateTime;
             else if (t == typeof(Guid))
                 return TSMDataType.Guid;
+            else if (t == typeof(bool))
+                return TSMDataType.Bool;
 
             return TSMDataType.Undefined;
         }
