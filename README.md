@@ -10,7 +10,7 @@ adds some SQL Query capabilities.
 * Nullable Types.
 * Handle string StartsWith and others.
 
-### Example:
+### Example: Where
 
 First create a class to hold the returned data.
 
@@ -73,6 +73,52 @@ SELECT NODE_NAME,TOTAL_MB FROM AUDITOCC WHERE NODE_NAME = 'TESTNODE'
 The dsmadmc will be called with this query and return a csvlist of values.
 After a successfull call, it will decode csv and convert to Generic Type 
 and return the data to caller.
+
+
+### Example: Select (unsafe)
+
+In order to handle all cases, you can use any sql (and hope conversion works).
+
+First create the result class.
+Note that no attributes are required for this.
+
+```csharp
+namespace Example
+{
+    public class NodeStatistics
+    {
+        public int NodeCount {get;set;}
+        public double SumNodeMB {get;set;}
+    }
+}
+```
+
+Then use something like this to get the result.
+But YOU are responsible for not things blowing up...
+Thats why the argument is named "UnsafeSql".
+
+
+```csharp
+using Kraggs.TSM7.Utils;
+using Kraggs.TSM7.Data;
+
+namespace Example
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            var dsmadmc = new clsDsmAdmc(...);
+
+            var nodeStats = dsmadmc.Select<NodeStatistics>(
+                "select count(*), sum(TOTAL_MB) from AuditOcc");
+
+        }
+    }
+}
+```
+
+Values will be converted in the same order as the specified on the class.
 
 
 ### Missing Tests:
