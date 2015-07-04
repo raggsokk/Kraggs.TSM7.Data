@@ -23,8 +23,67 @@ using System.Threading.Tasks;
 
 namespace Kraggs.TSM7.Data
 {
+    //TODO: Merge Convert & ConvertUnsafe since they are almost equal.
     internal static class CsvConvert
     {
+        public static List<T> ConvertUnsafe<T>(List<List<string>> CsvLines)
+        {
+            var result = new List<T>();
+
+            var type = typeof(T);
+            var myType = Reflection.Instance.GetTypeInfo(type.FullName, type);
+
+            var arrColumns = myType.Columns.ToArray();
+
+            foreach(var listValues in CsvLines)
+            {
+                var o = myType.CreateObject();
+
+                int i = 0;
+                foreach(var value in listValues)
+                {
+                    if (i == arrColumns.Length)
+                        break;
+
+                    var column = arrColumns[i];
+                    object oset = null;
+
+                    var flagNull = value.Length == 0;
+
+                    //TODO: Handle null values from TSM.
+                    //TODO: Handle nullable types in T.
+                    
+                    switch (column.DataType)
+                    {
+                        case TSMDataType.String:
+                            oset = value; break;
+                        case TSMDataType.Short:
+                            oset = short.Parse(value); break;
+                        case TSMDataType.Int:
+                            oset = int.Parse(value); break;
+                        case TSMDataType.Long:
+                            oset = long.Parse(value); break;
+                        case TSMDataType.Double:
+                            oset = double.Parse(value); break;
+                        case TSMDataType.Float:
+                            //oset = float.Parse(v, CultureInfo.InvariantCulture, CultureInfo.InvariantCulture )
+                            oset = float.Parse(value); break;
+                        default:
+                            throw new NotImplementedException();
+                    }
+
+                    column.SetValue(o, oset);
+                    i++;
+                }
+
+
+                result.Add((T)o);
+            }
+
+
+            return result;
+        }
+
         public static List<T> Convert<T>(List<List<string>> CsvLines, clsTypeInfo myType, List<clsColumnInfo> Columns)
         {
             var result = new List<T>();

@@ -31,6 +31,46 @@ namespace Kraggs.TSM7.Data
 {
     public static class DsmAdmcExtensions
     {
+        /// <summary>
+        /// Runs an user specified sql query and tries to parse it into Type T.
+        /// This is Unsafe since we have to information of what you are quering.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="dsmadmc"></param>
+        /// <param name="UnsafeSQL"></param>
+        /// <param name="UseTmpFile">If result is expected to be large, use tmp file instead of keeping all in memory.</param>
+        /// <returns></returns>
+        public static List<T> Select<T>(this clsDsmAdmc dsmadmc, string UnsafeSQL, bool UseTmpFile = false)
+        {
+            // uber simple validation.
+            if (!UnsafeSQL.StartsWith("SELECT", StringComparison.InvariantCultureIgnoreCase))
+                throw new ArgumentException("SQL Query MUST start with SELECT", "UnsafeSQL");
+
+            if (!UseTmpFile)
+            {
+
+                var tsmlist = new List<string>();
+
+                var retCode = dsmadmc.RunTSMCommandToList(UnsafeSQL, tsmlist);
+
+                if(retCode == AdmcExitCode.NotFound)
+                    return new List<T>(); // return null instead?
+
+                List<List<string>> parsed = new List<List<string>>();
+
+                int parseCount = CsvParser.Parse(tsmlist, parsed);
+
+                return CsvConvert.ConvertUnsafe<T>(parsed);
+            }
+            else
+            {
+                //TODO: impl writing to tmp file. then block parse result into result.
+
+                throw new NotImplementedException("Use Temp file instead of all inmemeory is not implemented yet.");
+            }
+        }
+
+
         public static List<T> Where<T>(this clsDsmAdmc dsmadmc, Expression<Func<T, bool>> filter)
         {
             /*
@@ -63,7 +103,7 @@ namespace Kraggs.TSM7.Data
             if (!ExpressionHelper.BuildWhereString(sb, filter))
                 return null;
 
-            var list = new List<string>();            
+            var list = new List<string>();
 
             var retCode = dsmadmc.RunTSMCommandToList(sb.ToString(), list);
 

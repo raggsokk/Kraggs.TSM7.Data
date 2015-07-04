@@ -49,5 +49,10 @@ namespace Kraggs.TSM7.Data
         /// Generic Value Setter function.
         /// </summary>
         public GenericSetter SetValue { get; set; }
+
+        /// <summary>
+        /// More Cached DataType Info.
+        /// </summary>
+        public bool IsNullable { get; set; }
     }
 }
