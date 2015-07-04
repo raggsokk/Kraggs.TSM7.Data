@@ -60,7 +60,8 @@ namespace Kraggs.TSM7.Data
 
                 int parseCount = CsvParser.Parse(tsmlist, parsed);
 
-                return CsvConvert.ConvertUnsafe<T>(parsed);
+                //return CsvConvert.ConvertUnsafe<T>(parsed);
+                return CsvConvert.Convert<T>(parsed);
             }
             else
             {
@@ -111,6 +112,7 @@ namespace Kraggs.TSM7.Data
 
             int parseCount = CsvParser.Parse(list, parsed);
 
+            //return CsvConvert.Convert<T>(parsed, myType, myType.Columns);
             return CsvConvert.Convert<T>(parsed, myType, myType.Columns);
         }
 
