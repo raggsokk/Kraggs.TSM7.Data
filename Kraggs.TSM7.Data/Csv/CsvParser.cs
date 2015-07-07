@@ -68,7 +68,8 @@ namespace Kraggs.TSM7.Data
             return list;
         }
 
-        public static int Parse(List<string> CsvLines, System.Collections.IList result, char CsvSeparator = ',')
+        //public static int Parse(List<string> CsvLines, System.Collections.IList result, char CsvSeparator = ',')
+        public static int Parse(IEnumerable<string> CsvLines, System.Collections.IList result, char CsvSeparator = ',')
         {
             if (CsvLines == null)
                 throw new ArgumentNullException("CsvLines");

@@ -21,6 +21,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using System.IO;
 using System.Diagnostics;
 using System.Linq.Expressions;
 
@@ -31,20 +32,18 @@ namespace Kraggs.TSM7.Data
 {
     public static class DsmAdmcExtensions
     {
+        /// <summary>
+        /// Runs a type specific query. Looks up the TSMQueryAttribte on a query and runs it.
+        /// For now no parameters are supported.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="dsmadmc"></param>
+        /// <param name="UseTmpFile"></param>
+        /// <returns></returns>
+        [DebuggerNonUserCode()]
         public static List<T> Select<T>(this clsDsmAdmc dsmadmc, bool UseTmpFile = false)
         {
             return Select<T>(dsmadmc, null, UseTmpFile);
-
-            //var t = typeof(T);
-            //var myType = Reflection.Instance.GetTypeInfo(t.FullName, t);
-
-            //if (string.IsNullOrWhiteSpace(myType.TSMSqlQuery))
-            //    throw new ArgumentNullException("Generic Type requires TSMQueryAttribute to spesify tsm query to run.");
-
-            //if (!myType.TSMSqlQuery.StartsWith("SELECT", StringComparison.InvariantCultureIgnoreCase))
-            //    throw new ArgumentException("TSMQueryAttribute requires sql queries starting with SELECT");
-
-            //return Select<T>(dsmadmc, myType.TSMSqlQuery, UseTmpFile);
         }
 
         /// <summary>
@@ -93,22 +92,38 @@ namespace Kraggs.TSM7.Data
             }
             else
             {
-                //TODO: impl writing to tmp file. then block parse result into result.
+                using(var tmp = new Misc.AutoDeleteTempFile())
+                {
+                    var retCode = dsmadmc.RunTSMCommandToFile(
+                        UnsafeSQL, tmp.TempFile);
 
-                throw new NotImplementedException("Use Temp file instead of all inmemeory is not implemented yet.");
+                    if(retCode == AdmcExitCode.NotFound)
+                        return new List<T>();
+
+                    //TODO: block parse result aka read 100 lines, convert and add to result, repeat.
+                    //tmp.Open();
+
+                    var lines = File.ReadAllLines(tmp.TempFile);
+
+                    List<List<string>> parsed = new List<List<string>>();
+
+                    int parseCount = CsvParser.Parse(lines, parsed);
+                    
+                    return CsvConvert.Convert<T>(parsed);
+                }
             }
         }
 
-
-        public static List<T> Where<T>(this clsDsmAdmc dsmadmc, Expression<Func<T, bool>> filter)
+        /// <summary>
+        /// Runs a "SELECT ... FROM ... WHERE [LINQ]" query.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="dsmadmc"></param>
+        /// <param name="where"></param>
+        /// <param name="UseTmpFile"></param>
+        /// <returns></returns>
+        public static List<T> Where<T>(this clsDsmAdmc dsmadmc, Expression<Func<T>> where, bool UseTmpFile = false)
         {
-            //TODO: Make this call Select<t>(dsmadmc,sql, usetmpfile) after generating sql query.
-
-            /*
-             * 1. generate sql.
-             * 2. call tsm
-             * 3. parse csv to list.
-             */
             var type = typeof(T);
             var myType = Reflection.Instance.GetTypeInfo(type.FullName, type);
 
@@ -131,20 +146,58 @@ namespace Kraggs.TSM7.Data
             sb.Append(myType.TableName);
             sb.Append(" WHERE ");
 
-            if (!ExpressionHelper.BuildWhereString(sb, filter))
-                return null;
+            if (!ExpressionHelper.BuildWhereString(sb, where))
+                throw new ArgumentException("Failed to parse linq expression", "where");
 
-            var list = new List<string>();
 
-            var retCode = dsmadmc.RunTSMCommandToList(sb.ToString(), list);
-
-            List<List<string>> parsed = new List<List<string>>();
-
-            int parseCount = CsvParser.Parse(list, parsed);
-
-            //return CsvConvert.Convert<T>(parsed, myType, myType.Columns);
-            return CsvConvert.Convert<T>(parsed, myType, myType.Columns);
+            return Select<T>(dsmadmc, sb.ToString(), UseTmpFile);
         }
+
+        //public static List<T> Where<T>(this clsDsmAdmc dsmadmc, Expression<Func<T, bool>> filter)
+        //{
+        //    //TODO: Make this call Select<t>(dsmadmc,sql, usetmpfile) after generating sql query.
+
+        //    /*
+        //     * 1. generate sql.
+        //     * 2. call tsm
+        //     * 3. parse csv to list.
+        //     */
+        //    var type = typeof(T);
+        //    var myType = Reflection.Instance.GetTypeInfo(type.FullName, type);
+
+        //    var sb = new StringBuilder();
+
+        //    sb.Append("SELECT ");
+        //    bool flagDummy = false;
+
+        //    foreach (var c in myType.Columns)
+        //    {
+        //        if (flagDummy)
+        //        {
+        //            sb.Append(", ");
+        //        }
+        //        sb.Append(c.ColumnName);
+        //        flagDummy = true;
+        //    }
+
+        //    sb.Append(" FROM ");
+        //    sb.Append(myType.TableName);
+        //    sb.Append(" WHERE ");
+
+        //    if (!ExpressionHelper.BuildWhereString(sb, filter))
+        //        return null;
+
+        //    var list = new List<string>();
+
+        //    var retCode = dsmadmc.RunTSMCommandToList(sb.ToString(), list);
+
+        //    List<List<string>> parsed = new List<List<string>>();
+
+        //    int parseCount = CsvParser.Parse(list, parsed);
+
+        //    //return CsvConvert.Convert<T>(parsed, myType, myType.Columns);
+        //    return CsvConvert.Convert<T>(parsed, myType, myType.Columns);
+        //}
 
     }
 }
