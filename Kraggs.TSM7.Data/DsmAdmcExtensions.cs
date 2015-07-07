@@ -149,7 +149,7 @@ namespace Kraggs.TSM7.Data
         /// <param name="where"></param>
         /// <param name="UseTmpFile"></param>
         /// <returns></returns>
-        public static List<T> Where<T>(this clsDsmAdmc dsmadmc, Expression<Func<T>> where, bool UseTmpFile = false)
+        public static List<T> Where<T>(this clsDsmAdmc dsmadmc, Expression<Func<T, bool>> where, bool UseTmpFile = false)
         {
             var type = typeof(T);
             var myType = Reflection.Instance.GetTypeInfo(type.FullName, type);
