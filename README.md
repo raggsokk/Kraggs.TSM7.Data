@@ -120,10 +120,51 @@ namespace Example
 
 Values will be converted in the same order as the specified on the class.
 
+### Example: Select (TSMQueryAttribute)
+
+Instead of having SQL Queries mixed in with functial code, you can use TSMQueryAttribute.
+TSMQueryAttribute enables to tag a type with a default SQL Query to run.
+This way you can keep Type and SQL code designed for the Type in the same place.
+
+```csharp
+namespace Example
+{
+    [TSMQuery("select count(*), sum(TOTAL_MB) from AuditOcc")]
+    public class NodeStatistics
+    {
+        public int NodeCount {get;set;}
+        public double SumNodeMB {get;set;}
+    }
+}
+```
+
+And the code to use this type query.
+
+```csharp
+using Kraggs.TSM7.Utils;
+using Kraggs.TSM7.Data;
+
+namespace Example
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            var dsmadmc = new clsDsmAdmc(...);
+
+            var nodeStats = dsmadmc.Select<NodeStatistics>();
+
+        }
+    }
+}
+```
+
+
 
 ### Missing Tests:
-* Convert GUID
-* Convert DateTime
+* ~~Convert GUID~~
+* ~~Convert DateTime~~
+* ~~Sql queries~~
 * Nullable types
-* Sql queries
-* 
+* Unit Tests
+* Proper Linq provider.
