@@ -101,15 +101,42 @@ namespace Kraggs.TSM7.Data
                         return new List<T>();
 
                     //TODO: block parse result aka read 100 lines, convert and add to result, repeat.
-                    //tmp.Open();
-
-                    var lines = File.ReadAllLines(tmp.TempFile);
+                    tmp.Open();
+                    var reader = new StreamReader(tmp.Stream);
 
                     List<List<string>> parsed = new List<List<string>>();
+                    var result = new List<T>();
 
-                    int parseCount = CsvParser.Parse(lines, parsed);
+                    var sb = new StringBuilder();
+                    var count = 0;
+
+                    do
+                    {
+                        string s = string.Empty;
+                        while ((s = reader.ReadLine()) != null)
+                        {
+                            parsed.Add(CsvParser.Parse(s, sb));
+                            count++;
+                            if (count == 1024)
+                                break;
+                        }
+
+                        // todo: ask reader to prefil next 4096 lines of bytes while converting?
+                        result.AddRange(CsvConvert.Convert<T>(parsed));
+                        parsed.Clear();
+                        count = 0;
+
+                    } while (sb != null);
+
+                    return result;
+
+                    //var lines = File.ReadAllLines(tmp.TempFile);
+
+                    //List<List<string>> parsed = new List<List<string>>();
+
+                    //int parseCount = CsvParser.Parse(lines, parsed);
                     
-                    return CsvConvert.Convert<T>(parsed);
+                    //return CsvConvert.Convert<T>(parsed);
                 }
             }
         }

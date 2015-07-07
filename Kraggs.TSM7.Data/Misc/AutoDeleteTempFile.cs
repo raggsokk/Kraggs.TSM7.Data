@@ -21,6 +21,18 @@ namespace Kraggs.TSM7.Data.Misc
             //    FileAccess.ReadWrite,)
         }
 
+        public void Open(bool AutoDelete = true, bool Async = true)
+        {
+            FileOptions options = FileOptions.SequentialScan;
+            if (AutoDelete)
+                options = options | FileOptions.DeleteOnClose;
+            if (Async)
+                options = options | FileOptions.Asynchronous;
+
+            Stream = new FileStream(TempFile, FileMode.Open, FileAccess.Read, FileShare.None,
+                8192, options);
+        }
+
         public void Dispose()
         {
             //throw new NotImplementedException();

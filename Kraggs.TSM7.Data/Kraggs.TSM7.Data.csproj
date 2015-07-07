@@ -42,6 +42,7 @@
     <Compile Include="Csv\CsvParser.cs" />
     <Compile Include="DsmAdmcExtensions.cs" />
     <Compile Include="ExpressionHelper.cs" />
+    <Compile Include="Misc\AutoDeleteTempFile.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Reflection\clsColumnInfo.cs" />
     <Compile Include="Reflection\clsTypeInfo.cs" />
