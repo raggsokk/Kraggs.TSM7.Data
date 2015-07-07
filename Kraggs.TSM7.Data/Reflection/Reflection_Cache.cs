@@ -85,6 +85,10 @@ namespace Kraggs.TSM7.Data
             else
                 myType.TableName = tiMap.Name; // tiT.Name;
 
+            var attribQuery = tiMap.GetCustomAttribute<TSMQueryAttribute>();
+            if (attribQuery != null && !string.IsNullOrWhiteSpace(attribQuery.TSMSqlQuery))
+                myType.TSMSqlQuery = attribQuery.TSMSqlQuery;
+
             myType.CreateObject = CreateConstructorMethod(t, tiT);
 
             // 2. foreach(prop) get attrib.

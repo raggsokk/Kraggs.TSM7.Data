@@ -52,6 +52,8 @@ namespace Kraggs.TSM7.Data
         /// </summary>
         public CreateObject CreateObject { get; set; }
 
+        public string TSMSqlQuery { get; set; }
+
         /// <summary>
         /// List of properties on this type.
         /// </summary>

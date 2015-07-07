@@ -31,6 +31,22 @@ namespace Kraggs.TSM7.Data
 {
     public static class DsmAdmcExtensions
     {
+        public static List<T> Select<T>(this clsDsmAdmc dsmadmc, bool UseTmpFile = false)
+        {
+            return Select<T>(dsmadmc, null, UseTmpFile);
+
+            //var t = typeof(T);
+            //var myType = Reflection.Instance.GetTypeInfo(t.FullName, t);
+
+            //if (string.IsNullOrWhiteSpace(myType.TSMSqlQuery))
+            //    throw new ArgumentNullException("Generic Type requires TSMQueryAttribute to spesify tsm query to run.");
+
+            //if (!myType.TSMSqlQuery.StartsWith("SELECT", StringComparison.InvariantCultureIgnoreCase))
+            //    throw new ArgumentException("TSMQueryAttribute requires sql queries starting with SELECT");
+
+            //return Select<T>(dsmadmc, myType.TSMSqlQuery, UseTmpFile);
+        }
+
         /// <summary>
         /// Runs an user specified sql query and tries to parse it into Type T.
         /// This is Unsafe since we have to information of what you are quering.
@@ -42,6 +58,18 @@ namespace Kraggs.TSM7.Data
         /// <returns></returns>
         public static List<T> Select<T>(this clsDsmAdmc dsmadmc, string UnsafeSQL, bool UseTmpFile = false)
         {
+            if(string.IsNullOrWhiteSpace(UnsafeSQL))
+            {
+                // type sql query
+                var t = typeof(T);
+                var myType = Reflection.Instance.GetTypeInfo(t.FullName, t);
+
+                if (string.IsNullOrWhiteSpace(myType.TSMSqlQuery))
+                    throw new ArgumentNullException("Generic Type requires TSMQueryAttribute to spesify tsm query to run.");
+                else
+                    UnsafeSQL = myType.TSMSqlQuery;
+            }
+                      
             // uber simple validation.
             if (!UnsafeSQL.StartsWith("SELECT", StringComparison.InvariantCultureIgnoreCase))
                 throw new ArgumentException("SQL Query MUST start with SELECT", "UnsafeSQL");
@@ -74,6 +102,8 @@ namespace Kraggs.TSM7.Data
 
         public static List<T> Where<T>(this clsDsmAdmc dsmadmc, Expression<Func<T, bool>> filter)
         {
+            //TODO: Make this call Select<t>(dsmadmc,sql, usetmpfile) after generating sql query.
+
             /*
              * 1. generate sql.
              * 2. call tsm
