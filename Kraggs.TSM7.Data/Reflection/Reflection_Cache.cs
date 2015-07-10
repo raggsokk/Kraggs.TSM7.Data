@@ -88,6 +88,7 @@ namespace Kraggs.TSM7.Data
             var attribQuery = tiMap.GetCustomAttribute<TSMQueryAttribute>();
             if (attribQuery != null && !string.IsNullOrWhiteSpace(attribQuery.TSMSqlQuery))
                 myType.TSMSqlQuery = attribQuery.TSMSqlQuery;
+            
 
             myType.CreateObject = CreateConstructorMethod(t, tiT);
 
@@ -106,6 +107,10 @@ namespace Kraggs.TSM7.Data
                 if (map != null)
                     if (!tiPropHash.ContainsKey(p.Name))
                         continue; // if not matching key name, skip it.
+
+                var ignoreAttrib = p.GetCustomAttribute<TSMIgnore>();
+                if (ignoreAttrib != null)
+                    continue; //TODO: Should we instead mark prop as ignore but keep it?
 
                 var cT = new clsColumnInfo() { MemberName = p.Name };
 

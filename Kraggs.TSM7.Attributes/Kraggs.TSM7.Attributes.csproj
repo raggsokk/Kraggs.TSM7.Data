@@ -39,6 +39,7 @@
   <ItemGroup>
     <Compile Include="TSMColumnAttribute.cs" />
     <Compile Include="TSMDataType.cs" />
+    <Compile Include="TSMIgnore.cs" />
     <Compile Include="TSMQueryAttribute.cs" />
     <Compile Include="TSMTableAttribute.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
