@@ -4,6 +4,7 @@ Kraggs.TSM7.Data is an extension to Kraggs.TSM7.Utils which
 adds some SQL Query capabilities.
 
 ### TODO:
+* TSMQuery attribute. Update its usage (it replaces SelectAll Sql Generation.)
 * Aggregate (sum, count, etc).
 * Unions (select subset from several tables).
 * Limit (fetch first X rows only)
