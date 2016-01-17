@@ -41,7 +41,7 @@ namespace Kraggs.TSM7.Data
         /// <param name="UseTmpFile"></param>
         /// <returns></returns>
         [DebuggerNonUserCode()]
-        public static List<T> Select<T>(this clsDsmAdmc dsmadmc, bool UseTmpFile = false)
+        public static List<T> Select<T>(this clsDsmAdmc dsmadmc, Version TSMVersion = null, bool UseTmpFile = false)
         {
             return Select<T>(dsmadmc, null, UseTmpFile);
         }
@@ -55,8 +55,10 @@ namespace Kraggs.TSM7.Data
         /// <param name="UnsafeSQL"></param>
         /// <param name="UseTmpFile">If result is expected to be large, use tmp file instead of keeping all in memory.</param>
         /// <returns></returns>
-        public static List<T> Select<T>(this clsDsmAdmc dsmadmc, string UnsafeSQL, bool UseTmpFile = false)
+        public static List<T> Select<T>(this clsDsmAdmc dsmadmc, string UnsafeSQL, Version TSMVersion = null, bool UseTmpFile = false)
         {
+            //clsTypeInfo myType = null;
+
             if(string.IsNullOrWhiteSpace(UnsafeSQL))
             {
                 // type sql query
@@ -64,7 +66,12 @@ namespace Kraggs.TSM7.Data
                 var myType = Reflection.Instance.GetTypeInfo(t.FullName, t);
 
                 if (string.IsNullOrWhiteSpace(myType.TSMSqlQuery))
-                    throw new ArgumentNullException("Generic Type requires TSMQueryAttribute to spesify tsm query to run.");
+                {
+                    // default to use all columns known.
+                    UnsafeSQL = CommonFunction.CreateSelectAll(myType, TSMVersion).ToString();
+
+                    //throw new ArgumentNullException("Generic Type requires TSMQueryAttribute to spesify tsm query to run.");
+                }
                 else
                     UnsafeSQL = myType.TSMSqlQuery;
             }
@@ -73,112 +80,11 @@ namespace Kraggs.TSM7.Data
             if (!UnsafeSQL.StartsWith("SELECT", StringComparison.InvariantCultureIgnoreCase))
                 throw new ArgumentException("SQL Query MUST start with SELECT", "UnsafeSQL");
 
-            if (!UseTmpFile)
-            {
+            return CommonFunction.Execute<T>(dsmadmc, UnsafeSQL, UseTmpFile);
 
-                var tsmlist = new List<string>();
-
-                var retCode = dsmadmc.RunTSMCommandToList(UnsafeSQL, tsmlist);
-
-                if(retCode == AdmcExitCode.NotFound)
-                    return new List<T>(); // return null instead?
-
-                List<List<string>> parsed = new List<List<string>>();
-
-                int parseCount = CsvParser.Parse(tsmlist, parsed);
-
-                //return CsvConvert.ConvertUnsafe<T>(parsed);
-                return CsvConvert.Convert<T>(parsed);
-            }
-            else
-            {
-                using(var tmp = new Misc.AutoDeleteTempFile())
-                {
-                    var retCode = dsmadmc.RunTSMCommandToFile(
-                        UnsafeSQL, tmp.TempFile);
-
-                    if(retCode == AdmcExitCode.NotFound)
-                        return new List<T>();
-
-                    //TODO: block parse result aka read 100 lines, convert and add to result, repeat.
-                    tmp.Open();
-                    var reader = new StreamReader(tmp.Stream);
-
-                    List<List<string>> parsed = new List<List<string>>();
-                    var result = new List<T>();
-
-                    var sb = new StringBuilder();
-                    var count = 0;
-
-                    do
-                    {
-                        string s = string.Empty;
-                        while ((s = reader.ReadLine()) != null)
-                        {
-                            parsed.Add(CsvParser.Parse(s, sb));
-                            count++;
-                            if (count == 1024)
-                                break;
-                        }
-
-                        // todo: ask reader to prefil next 4096 lines of bytes while converting?
-                        result.AddRange(CsvConvert.Convert<T>(parsed));
-                        parsed.Clear();
-                        count = 0;
-
-                    } while (sb != null);
-
-                    return result;
-
-                    //var lines = File.ReadAllLines(tmp.TempFile);
-
-                    //List<List<string>> parsed = new List<List<string>>();
-
-                    //int parseCount = CsvParser.Parse(lines, parsed);
-                    
-                    //return CsvConvert.Convert<T>(parsed);
-                }
-            }
+ 
         }
 
-        /// <summary>
-        /// Runs a "SELECT ... FROM ... WHERE [LINQ]" query.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="dsmadmc"></param>
-        /// <param name="where"></param>
-        /// <param name="UseTmpFile"></param>
-        /// <returns></returns>
-        public static List<T> Where<T>(this clsDsmAdmc dsmadmc, Expression<Func<T, bool>> where, bool UseTmpFile = false)
-        {
-            var type = typeof(T);
-            var myType = Reflection.Instance.GetTypeInfo(type.FullName, type);
-
-            var sb = new StringBuilder();
-
-            sb.Append("SELECT ");
-            bool flagDummy = false;
-
-            foreach (var c in myType.Columns)
-            {
-                if (flagDummy)
-                {
-                    sb.Append(", ");
-                }
-                sb.Append(c.ColumnName);
-                flagDummy = true;
-            }
-
-            sb.Append(" FROM ");
-            sb.Append(myType.TableName);
-            sb.Append(" WHERE ");
-
-            if (!ExpressionHelper.BuildWhereString(sb, where))
-                throw new ArgumentException("Failed to parse linq expression", "where");
-
-
-            return Select<T>(dsmadmc, sb.ToString(), UseTmpFile);
-        }
 
         /// <summary>
         /// Runs a "SELECT [computedcolumns] FROM [computedtable] WHERE [UnsafeSQL]" query
@@ -203,53 +109,19 @@ namespace Kraggs.TSM7.Data
             // type sql query
             var t = typeof(T);
             var myType = Reflection.Instance.GetTypeInfo(t.FullName, t);
-            
-            // retrive version filtered column names,
-            var columns = dsmadmc.GetTSMColumns(myType, TSMVersion);
 
-            var sb = new StringBuilder();
-            sb.Append("SELECT ");
-            //bool flagDummy = false;
-            sb.Append(string.Join(", ", columns));
-            sb.AppendFormat(" FROM {0} ", myType.TableName);
+            // create select all
+
+            var sb = CommonFunction.CreateSelectAll(myType, TSMVersion);
+
+            sb.Append(" ");
             sb.Append(UnsafeWhereSQL);
 
-            return dsmadmc.Select<T>(sb.ToString(), UseTmpFile);
-            //foreach (var c in columns)
-            //{
-            //}
+            return CommonFunction.Execute<T>(dsmadmc, sb.ToString(), UseTmpFile);
+
         }
 
-        /// <summary>
-        /// Internal only for reuse among other functions which might need this functionality.
-        /// </summary>
-        /// <param name="dsmadmc"></param>
-        /// <param name="myType"></param>
-        /// <param name="TSMVersion"></param>
-        /// <returns></returns>
-        internal static IEnumerable<string> GetTSMColumns(this clsDsmAdmc dsmadmc, clsTypeInfo myType, Version TSMVersion = null)
-        {
-            if (TSMVersion != null && myType.RequiredVersion > TSMVersion)
-            {
-                // not high enoug version.
-                throw new ArgumentException(string.Format("Table '{0}' is not present on TSM Server version: '{1}'", myType.TableName, TSMVersion));
-            }
-
-            var list = new List<string>();
-
-            foreach(var c in myType.Columns)
-            {
-                if (c.RequiredVersion != null && TSMVersion != null)
-                {
-                    if (c.RequiredVersion <= TSMVersion)
-                        list.Add(c.ColumnName);
-                }
-                else
-                    list.Add(c.ColumnName); // if no version info present, assume okay.
-            }
-
-            return list;
-        }
+        #region TSM Info Functions.
 
         /// <summary>
         /// Retrives in the expected order a list of the column names which can be used with type T.
@@ -264,57 +136,8 @@ namespace Kraggs.TSM7.Data
             var type = typeof(T);
             var myType = Reflection.Instance.GetTypeInfo(type.FullName, type);
 
-            return dsmadmc.GetTSMColumns(myType, TSMVersion);
-
+            return CommonFunction.GetColumnNamesByVersion(myType, TSMVersion);          
         }
-
-        //public static List<T> Where<T>(this clsDsmAdmc dsmadmc, Expression<Func<T, bool>> filter)
-        //{
-        //    //TODO: Make this call Select<t>(dsmadmc,sql, usetmpfile) after generating sql query.
-
-        //    /*
-        //     * 1. generate sql.
-        //     * 2. call tsm
-        //     * 3. parse csv to list.
-        //     */
-        //    var type = typeof(T);
-        //    var myType = Reflection.Instance.GetTypeInfo(type.FullName, type);
-
-        //    var sb = new StringBuilder();
-
-        //    sb.Append("SELECT ");
-        //    bool flagDummy = false;
-
-        //    foreach (var c in myType.Columns)
-        //    {
-        //        if (flagDummy)
-        //        {
-        //            sb.Append(", ");
-        //        }
-        //        sb.Append(c.ColumnName);
-        //        flagDummy = true;
-        //    }
-
-        //    sb.Append(" FROM ");
-        //    sb.Append(myType.TableName);
-        //    sb.Append(" WHERE ");
-
-        //    if (!ExpressionHelper.BuildWhereString(sb, filter))
-        //        return null;
-
-        //    var list = new List<string>();
-
-        //    var retCode = dsmadmc.RunTSMCommandToList(sb.ToString(), list);
-
-        //    List<List<string>> parsed = new List<List<string>>();
-
-        //    int parseCount = CsvParser.Parse(list, parsed);
-
-        //    //return CsvConvert.Convert<T>(parsed, myType, myType.Columns);
-        //    return CsvConvert.Convert<T>(parsed, myType, myType.Columns);
-        //}
-
-
 
         /// <summary>
         /// Gets the TSM Server Instance Version.
@@ -341,5 +164,36 @@ namespace Kraggs.TSM7.Data
             throw new ApplicationException("Failed to obtain TSM Instance version");
         }
 
+        #endregion
+
+        #region TSM Linq
+
+        /// <summary>
+        /// Runs a "SELECT ... FROM ... WHERE [LINQ]" query.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="dsmadmc"></param>
+        /// <param name="where"></param>
+        /// <param name="UseTmpFile"></param>
+        /// <returns></returns>
+        public static List<T> Where<T>(this clsDsmAdmc dsmadmc, Expression<Func<T, bool>> where, Version TSMVersion = null,  bool UseTmpFile = false)
+        {
+            var type = typeof(T);
+            var myType = Reflection.Instance.GetTypeInfo(type.FullName, type);
+
+            var sb = CommonFunction.CreateSelectAll(myType, TSMVersion);
+
+            sb.Append(" WHERE ");
+
+
+            if (!ExpressionHelper.BuildWhereString(sb, where))
+                throw new ArgumentException("Failed to parse linq expression", "where");
+
+            return CommonFunction.Execute<T>(dsmadmc, sb.ToString(), UseTmpFile);
+
+        }
+
+
+        #endregion
     }
 }

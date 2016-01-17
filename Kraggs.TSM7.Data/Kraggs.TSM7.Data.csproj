@@ -38,6 +38,7 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CommonFunction.cs" />
     <Compile Include="Csv\CsvConvert.cs" />
     <Compile Include="Csv\CsvParser.cs" />
     <Compile Include="DsmAdmcExtensions.cs" />

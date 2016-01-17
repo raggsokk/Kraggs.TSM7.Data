@@ -54,7 +54,8 @@ namespace Kraggs.TSM7.Data
             clsColumnInfo[] arrColumns;
 
             if (Columns == null)
-                arrColumns = myType.Columns.ToArray();
+                arrColumns = CommonFunction.GetColumnsByVersion(myType, TSMVersion).ToArray();
+            //arrColumns = myType.Columns.ToArray();
             else
                 arrColumns = Columns.ToArray();
 
@@ -68,7 +69,7 @@ namespace Kraggs.TSM7.Data
                     if (i == arrColumns.Length)
                         break;
 
-                    var column = arrColumns[i++];                    
+                    var column = arrColumns[i++];
 
                     var flagNull = value.Length == 0;
                     if (flagNull) //UBER fancy null type handler.
