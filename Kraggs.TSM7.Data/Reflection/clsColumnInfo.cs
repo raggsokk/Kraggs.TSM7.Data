@@ -54,5 +54,10 @@ namespace Kraggs.TSM7.Data
         /// More Cached DataType Info.
         /// </summary>
         public bool IsNullable { get; set; }
+
+        /// <summary>
+        /// Sets the required TSM Version where this Column is present.
+        /// </summary>
+        public Version RequiredVersion { get; set; }
     }
 }

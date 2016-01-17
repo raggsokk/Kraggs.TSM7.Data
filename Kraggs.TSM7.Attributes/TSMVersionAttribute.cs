@@ -22,6 +22,7 @@ namespace Kraggs.TSM7.Data
     /// <summary>
     /// Marks a class, struct, field or property as being dependent on a specific TSM Server Version.
     /// </summary>
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Field | AttributeTargets.Property)]
     public class TSMVersionAttribute : Attribute
     {
         /// <summary>

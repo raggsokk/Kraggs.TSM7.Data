@@ -88,7 +88,11 @@ namespace Kraggs.TSM7.Data
             var attribQuery = tiMap.GetCustomAttribute<TSMQueryAttribute>();
             if (attribQuery != null && !string.IsNullOrWhiteSpace(attribQuery.TSMSqlQuery))
                 myType.TSMSqlQuery = attribQuery.TSMSqlQuery;
-            
+
+            // TSM version attrib?
+            var attribTableVersion = tiMap.GetCustomAttribute<TSMVersionAttribute>();
+            if (attribTableVersion != null)
+                myType.RequiredVersion = attribTableVersion.ServerVersion;
 
             myType.CreateObject = CreateConstructorMethod(t, tiT);
 
@@ -119,6 +123,11 @@ namespace Kraggs.TSM7.Data
                     cT.ColumnName = attribColumn.ColumnName;
                 else
                     cT.ColumnName = cT.MemberName;
+
+                // TSM version attrib?
+                var attribVersion = p.GetCustomAttribute<TSMVersionAttribute>();
+                if (attribVersion != null)
+                    cT.RequiredVersion = attribVersion.ServerVersion;
 
                 // CSV Convert info
                 cT.MemberType = p.PropertyType;

@@ -180,6 +180,94 @@ namespace Kraggs.TSM7.Data
             return Select<T>(dsmadmc, sb.ToString(), UseTmpFile);
         }
 
+        /// <summary>
+        /// Runs a "SELECT [computedcolumns] FROM [computedtable] WHERE [UnsafeSQL]" query
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="dsmadmc"></param>
+        /// <param name="UnsafeWhereSQL"></param>
+        /// <param name="UseTmpFile"></param>
+        /// <returns></returns>
+        public static List<T> Where<T>(this clsDsmAdmc dsmadmc, string UnsafeWhereSQL, Version TSMVersion = null, bool UseTmpFile = false)
+        {
+            if(string.IsNullOrWhiteSpace(UnsafeWhereSQL))
+            {
+                throw new ArgumentNullException("UnsafeWhereSQL");
+            }
+
+            if(!UnsafeWhereSQL.StartsWith("WHERE ", StringComparison.InvariantCultureIgnoreCase))
+            {
+                throw new ArgumentException("UnsafeWhereSQL must start with WHERE");
+            }
+
+            // type sql query
+            var t = typeof(T);
+            var myType = Reflection.Instance.GetTypeInfo(t.FullName, t);
+            
+            // retrive version filtered column names,
+            var columns = dsmadmc.GetTSMColumns(myType, TSMVersion);
+
+            var sb = new StringBuilder();
+            sb.Append("SELECT ");
+            //bool flagDummy = false;
+            sb.Append(string.Join(", ", columns));
+            sb.AppendFormat(" FROM {0} ", myType.TableName);
+            sb.Append(UnsafeWhereSQL);
+
+            return dsmadmc.Select<T>(sb.ToString(), UseTmpFile);
+            //foreach (var c in columns)
+            //{
+            //}
+        }
+
+        /// <summary>
+        /// Internal only for reuse among other functions which might need this functionality.
+        /// </summary>
+        /// <param name="dsmadmc"></param>
+        /// <param name="myType"></param>
+        /// <param name="TSMVersion"></param>
+        /// <returns></returns>
+        internal static IEnumerable<string> GetTSMColumns(this clsDsmAdmc dsmadmc, clsTypeInfo myType, Version TSMVersion = null)
+        {
+            if (TSMVersion != null && myType.RequiredVersion > TSMVersion)
+            {
+                // not high enoug version.
+                throw new ArgumentException(string.Format("Table '{0}' is not present on TSM Server version: '{1}'", myType.TableName, TSMVersion));
+            }
+
+            var list = new List<string>();
+
+            foreach(var c in myType.Columns)
+            {
+                if (c.RequiredVersion != null && TSMVersion != null)
+                {
+                    if (c.RequiredVersion <= TSMVersion)
+                        list.Add(c.ColumnName);
+                }
+                else
+                    list.Add(c.ColumnName); // if no version info present, assume okay.
+            }
+
+            return list;
+        }
+
+        /// <summary>
+        /// Retrives in the expected order a list of the column names which can be used with type T.
+        /// Optionally filters the names based on provided tsm server version.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="dsmadmc"></param>
+        /// <param name="TSMVersion"></param>
+        /// <returns></returns>
+        public static IEnumerable<string> GetTSMColumns<T>(this clsDsmAdmc dsmadmc, Version TSMVersion = null)
+        {
+            var type = typeof(T);
+            var myType = Reflection.Instance.GetTypeInfo(type.FullName, type);
+
+            return dsmadmc.GetTSMColumns(myType, TSMVersion);
+
+        }
+
         //public static List<T> Where<T>(this clsDsmAdmc dsmadmc, Expression<Func<T, bool>> filter)
         //{
         //    //TODO: Make this call Select<t>(dsmadmc,sql, usetmpfile) after generating sql query.
@@ -225,6 +313,33 @@ namespace Kraggs.TSM7.Data
         //    //return CsvConvert.Convert<T>(parsed, myType, myType.Columns);
         //    return CsvConvert.Convert<T>(parsed, myType, myType.Columns);
         //}
+
+
+
+        /// <summary>
+        /// Gets the TSM Server Instance Version.
+        /// TODO: Should this be here at all?
+        /// </summary>
+        /// <param name="dsmadmc"></param>
+        /// <returns></returns>
+        public static Version GetTSMVersion(this clsDsmAdmc dsmadmc)
+        {
+            var sql = "SELECT VERSION,RELEASE,LEVEL,SUBLEVEL FROM STATUS";
+
+            var csvlist = new List<string>();
+
+            var retCode = dsmadmc.RunTSMCommandToList(sql, csvlist);
+
+            if (retCode == AdmcExitCode.Ok)
+            {
+                Version v;
+
+                if (Version.TryParse(csvlist.First().Replace(",", "."), out v))
+                    return v;
+            }
+
+            throw new ApplicationException("Failed to obtain TSM Instance version");
+        }
 
     }
 }

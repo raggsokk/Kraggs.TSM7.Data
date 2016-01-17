@@ -38,6 +38,12 @@ namespace Kraggs.TSM7.Data
         public string TableName { get; set; }
 
         /// <summary>
+        /// Sets the required TSM Version where this table is present.
+        /// example: summary_extended
+        /// </summary>
+        public Version RequiredVersion { get; set; }
+
+        /// <summary>
         /// Reference to the Type this clsTypeInfo describes.
         /// </summary>
         public Type Type { get; set; }
