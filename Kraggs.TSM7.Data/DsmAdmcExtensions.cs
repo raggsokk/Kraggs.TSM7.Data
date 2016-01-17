@@ -43,7 +43,8 @@ namespace Kraggs.TSM7.Data
         [DebuggerNonUserCode()]
         public static List<T> Select<T>(this clsDsmAdmc dsmadmc, Version TSMVersion = null, bool UseTmpFile = false)
         {
-            return Select<T>(dsmadmc, null, UseTmpFile);
+            return Select<T>(dsmadmc, null, null, UseTmpFile);
+            //return CommonFunction.Execute<T>(dsmadmc, )
         }
 
         /// <summary>

@@ -172,8 +172,9 @@ namespace Kraggs.TSM7.Data
 
             sb.Append("SELECT ");
 
-            var columns = GetColumnsByVersion(myType, TSMVersion);
-
+            //var columns = GetColumnsByVersion(myType, TSMVersion);
+            var columns = GetColumnNamesByVersion(myType, TSMVersion);
+            
             sb.Append(string.Join(",", columns));
 
             sb.AppendFormat(" FROM {0} ", myType.TableName);
