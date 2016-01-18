@@ -76,7 +76,7 @@ namespace Kraggs.TSM7.Data
                 else
                     UnsafeSQL = myType.TSMSqlQuery;
             }
-                      
+            
             // uber simple validation.
             if (!UnsafeSQL.StartsWith("SELECT", StringComparison.InvariantCultureIgnoreCase))
                 throw new ArgumentException("SQL Query MUST start with SELECT", "UnsafeSQL");
