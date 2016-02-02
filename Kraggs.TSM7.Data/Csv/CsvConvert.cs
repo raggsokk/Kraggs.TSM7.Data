@@ -70,6 +70,8 @@ namespace Kraggs.TSM7.Data
                         break;
 
                     var column = arrColumns[i++];
+                    if (column == null)
+                        continue;
 
                     var flagNull = value.Length == 0;
                     if (flagNull) //UBER fancy null type handler.

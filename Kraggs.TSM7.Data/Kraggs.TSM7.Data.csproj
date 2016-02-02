@@ -49,6 +49,9 @@
     <Compile Include="Reflection\clsTypeInfo.cs" />
     <Compile Include="Reflection\Reflection.cs" />
     <Compile Include="Reflection\Reflection_Cache.cs" />
+    <Compile Include="Schema\clsSchemaColumn.cs" />
+    <Compile Include="Schema\clsSchemaTable.cs" />
+    <Compile Include="TSMConnection.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Kraggs.TSM7.Attributes\Kraggs.TSM7.Attributes.csproj">
