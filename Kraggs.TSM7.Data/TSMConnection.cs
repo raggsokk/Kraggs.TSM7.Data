@@ -230,7 +230,7 @@ namespace Kraggs.TSM7.Data
             if (pCacheSelect == null)
                 pCacheSelect = new SortedDictionary<string, clsSelectAllCacheItem>();
 
-            clsSelectAllCacheItem cachedSelect = null;            
+            clsSelectAllCacheItem cachedSelect = null;
 
             if (!pCacheSelect.TryGetValue(myType.TypeName, out cachedSelect))
             {
@@ -329,6 +329,13 @@ namespace Kraggs.TSM7.Data
             throw new NotImplementedException();
         }
 
+        /// <summary>
+        /// Generates a compatible select statement and appends your where statement.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="UnsafeSqlWhere"></param>
+        /// <param name="UseTmpFile"></param>
+        /// <returns></returns>
         public List<T> Where<T>(string UnsafeSqlWhere, bool UseTmpFile = false) where T : new()
         {
             if (UseTmpFile)
@@ -437,6 +444,73 @@ namespace Kraggs.TSM7.Data
         /// <returns></returns>
         public List<T> SelectAS<T>(string UnsafeSQLWithASColumns) where T : new()
         {
+            if (!UnsafeSQLWithASColumns.StartsWith("SELECT", StringComparison.InvariantCultureIgnoreCase))
+                throw new ArgumentException(string.Format(
+                    "The argument '{0}' does not start with 'SELECT'", nameof(UnsafeSQLWithASColumns)));
+
+            var posFrom = UnsafeSQLWithASColumns.IndexOf("FROM", StringComparison.InvariantCultureIgnoreCase);
+            if(posFrom == -1)
+                throw new ArgumentException(string.Format(
+                    "The argument '{0}' does not contain 'FROM'", nameof(UnsafeSQLWithASColumns)));
+
+            //var sb = new StringBuilder();
+
+            var parts = new List<string>();
+
+            //HACK Implementation for getting 'AS "ColumnName"' data.
+            for(int i = 7; i < posFrom; i++)
+            {
+                var posAS = UnsafeSQLWithASColumns.IndexOf("AS", i, StringComparison.InvariantCultureIgnoreCase);
+
+                if (posAS == -1)
+                    break;
+                else if(UnsafeSQLWithASColumns[posAS + 2] == ' ' && UnsafeSQLWithASColumns[posAS + 3] == '"')
+                {
+                    var posEnd = UnsafeSQLWithASColumns.IndexOf('"', posAS + 4);
+                    if (posEnd != 0)
+                        //parts.Add(UnsafeSQLWithASColumns.Substring(posAS + 4, posEnd - posAS - 4).Trim().ToUpperInvariant());
+                        parts.Add(UnsafeSQLWithASColumns.Substring(posAS + 4, posEnd - posAS - 4).Trim()); // case sensitive!
+                    i = posAS + 1;
+                }
+            }
+
+            if(parts.Count == 0)
+                throw new ArgumentException(string.Format(
+                    "The argument '{0}' does not contain any 'AS \"ColumnName\"' statements used to match value to property!", nameof(UnsafeSQLWithASColumns)));
+
+            foreach (var l in parts)
+                Console.WriteLine(l);
+
+            var type = typeof(T);
+            var myType = Reflection.Instance.GetTypeInfo(type.FullName, type);
+
+            //List<clsColumnInfo> cols = null;
+            List<clsColumnInfo> cols = new List<clsColumnInfo>();
+
+            foreach (var l in parts)
+            {
+                clsColumnInfo ci = null;
+
+                if (myType.ColumnHash.TryGetValue(l, out ci))
+                    cols.Add(ci);
+            }
+
+            var tsmlist = new List<string>();
+
+            var retCode = DsmAdmc.RunTSMCommandToList(UnsafeSQLWithASColumns, tsmlist);
+
+            if (retCode == AdmcExitCode.NotFound)
+                return new List<T>();
+            else if (retCode == AdmcExitCode.Ok)
+            {
+                List<List<string>> parsed = new List<List<string>>();
+
+                int parseCount = CsvParser.Parse(tsmlist, parsed);
+
+                //return CsvConvert.ConvertUnsafe<T>(parsed);
+                return CsvConvert.Convert<T>(parsed, myType, cols);
+            }
+
             throw new NotImplementedException();
         }
 
