@@ -25,20 +25,12 @@ using System.Diagnostics;
 
 namespace Kraggs.TSM7.Data.Schema
 {
-    [DebuggerDisplay("{ColName}")]
-    public class clsSchemaColumn
+    [DebuggerDisplay("{MyType.TypeName}")]
+    [DebuggerNonUserCode()]
+    internal class clsSelectAllCacheItem
     {
-        public string ColName { get; set; }
-
-        public int ColNo { get; set; }
-
-        public string TypeName { get; set; }
-
-        public int Length { get; set; }
-
-        public int Scale { get; set; }
-
-        public bool Nulls { get; set; }
-
+        public clsTypeInfo MyType { get; set; }   // A reference is smaller than a string... I think.     
+        public List<clsColumnInfo> Columns { get; set; }
+        public string SelectAll { get; set; }
     }
 }

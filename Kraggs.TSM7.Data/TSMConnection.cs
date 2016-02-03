@@ -1,4 +1,21 @@
-﻿using System;
+﻿#region License
+/*
+    TSM 7.1 Utility library.
+    Copyright (C) 2016 Jarle Hansen
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+#endregion
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -35,6 +52,9 @@ namespace Kraggs.TSM7.Data
 
         internal SortedDictionary<string, clsSchemaTable> pSchema { get; set; }
 
+        internal SortedDictionary<string, clsSelectAllCacheItem> pCacheSelect { get; set; }
+
+        [Obsolete]
         internal SortedDictionary<string, List<clsColumnInfo>> pCache { get; set; }
 
         #region Static Constructors
@@ -81,6 +101,7 @@ namespace Kraggs.TSM7.Data
 
         // filters the culumns from typeinfo with schema and version info.
         // returns the combined result.
+        [Obsolete]
         internal List<clsColumnInfo> GetFilteredColumnInfo(clsTypeInfo typeInfo)
         {
             // returns the
@@ -183,7 +204,8 @@ namespace Kraggs.TSM7.Data
                         table.Columns.Add(c);
                     }
 
-                    pSchema.Add(tupper, table);
+                    pSchema.Add(tupper, table); // uppercase lookup
+                    //pSchema.Add(tablename, table); // what used by user to.
                     return table;
                 }
                 else
@@ -192,43 +214,207 @@ namespace Kraggs.TSM7.Data
             }
         }
 
+        /// <summary>
+        /// Based on mytype, creates a select all, combining tsm schema and reflection data.
+        /// The result is returned in out SqlQuery and out Cols
+        /// </summary>
+        /// <param name="myType"></param>
+        /// <param name="SqlQuery">A select statement compatible with TSM Server version and with Type reflected names.</param>
+        /// <param name="cols">List of columns corresponding to SqlQuery generated.</param>
+        /// <param name="ExplicitQuery">false returns a "Select</param>
+        /// <returns></returns>
+        internal bool CreateSelectAll(clsTypeInfo myType, out string SqlQuery, out List<clsColumnInfo> cols, bool ExplicitQuery = true)
+        {
+            //TODO: Change ExplicitQuery to MaxLength instead?
+
+            if (pCacheSelect == null)
+                pCacheSelect = new SortedDictionary<string, clsSelectAllCacheItem>();
+
+            clsSelectAllCacheItem cachedSelect = null;            
+
+            if (!pCacheSelect.TryGetValue(myType.TypeName, out cachedSelect))
+            {
+                // 1. first get tsm schema.
+                var tabschema = GetTableSchema(myType.TableName);
+                var sb = new StringBuilder();
+                sb.Append("SELECT ");
+                cols = new List<clsColumnInfo>();
+
+                if (ExplicitQuery)
+                {
+                    foreach (var sc in tabschema.Columns)
+                    {
+                        clsColumnInfo f = null;
+
+                        if (myType.ColumnHash.TryGetValue(sc.ColName, out f))
+                        {
+                            if (f.RequiredVersion == null || f.RequiredVersion <= this.ServerVersion)
+                            {
+                                sb.AppendFormat("{0},", f.ColumnName);
+                                cols.Add(f);
+                            }
+                        }
+                    }
+                    // remove last ,
+                    sb.Length = sb.Length - 1;
+                }
+                else
+                {
+                    throw new NotImplementedException("Havent implemented non explicit code path yet.");
+                }
+
+                sb.AppendFormat(" FROM {0}", myType.TableName);
+
+                cachedSelect = new clsSelectAllCacheItem()
+                {
+                    MyType = myType,
+                    SelectAll = sb.ToString(),
+                    Columns = cols
+                };
+
+                pCacheSelect.Add(myType.TypeName, cachedSelect);
+            }
+
+            SqlQuery = cachedSelect.SelectAll;
+            cols = cachedSelect.Columns;
+
+            return true;
+        }
+
         #endregion
 
         #region Functions
 
-        public List<T> SelectAll<T>() where T : new()
+        /// <summary>
+        /// Selects all rows from table, generating a SelectAll query combining data from TSM Server Schema and from Reflection breakdown of user provided type.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public List<T> SelectAll<T>(bool UseTmpFile = false) where T : new()
         {
+            if (UseTmpFile)
+                throw new NotImplementedException();
+
             var type = typeof(T);
             var myType = Reflection.Instance.GetTypeInfo(type.FullName, type);
 
-            //var tabschema = GetTableSchema(myType.TableName);
+            List<clsColumnInfo> cols = null;
+            string SqlSelectAll = string.Empty;
 
-            var cols = GetFilteredColumnInfo(myType);
-
-            var tsmlist = new List<string>();
-
-            var q = string.Format("SELECT * FROM {0}", myType.TableName);
-
-            var retCode = DsmAdmc.RunTSMCommandToList(q, tsmlist);
-
-            if (retCode == AdmcExitCode.NotFound)
-                return new List<T>(); // return null instead?
-            else if(retCode == AdmcExitCode.Ok)
+            if (CreateSelectAll(myType, out SqlSelectAll, out cols, true))
             {
-                List<List<string>> parsed = new List<List<string>>();
+                var tsmlist = new List<string>();
 
-                int parseCount = CsvParser.Parse(tsmlist, parsed);
+                var retCode = DsmAdmc.RunTSMCommandToList(SqlSelectAll, tsmlist);                
 
-                //return CsvConvert.ConvertUnsafe<T>(parsed);
-                return CsvConvert.Convert<T>(parsed, myType, cols);
+                if (retCode == AdmcExitCode.NotFound)
+                    return new List<T>();
+                else if (retCode == AdmcExitCode.Ok)
+                {
+                    List<List<string>> parsed = new List<List<string>>();
+
+                    int parseCount = CsvParser.Parse(tsmlist, parsed);
+
+                    //return CsvConvert.ConvertUnsafe<T>(parsed);
+                    return CsvConvert.Convert<T>(parsed, myType, cols);
+                }
+                else
+                    throw new ApplicationException(string.Format(
+                        "Failed to run query '{0}'", SqlSelectAll));
             }
-
+            else
+                throw new ApplicationException(string.Format(
+                    "Failed to generate Select query for '{0}'", myType.TypeName));
 
             throw new NotImplementedException();
         }
 
+        public List<T> Where<T>(string UnsafeSqlWhere, bool UseTmpFile = false) where T : new()
+        {
+            if (UseTmpFile)
+                throw new NotImplementedException();
+
+            var type = typeof(T);
+            var myType = Reflection.Instance.GetTypeInfo(type.FullName, type);
+
+            List<clsColumnInfo> cols = null;
+            string SqlSelectAll = string.Empty;
+
+            if (CreateSelectAll(myType, out SqlSelectAll, out cols, true))
+            {
+                var tsmlist = new List<string>();
+
+                //Only when unsafe sql where is actually something does we call this function.
+                if(!string.IsNullOrWhiteSpace(UnsafeSqlWhere))
+                {
+                    //TODO: check for empty where statement and ignore them aka UnsafeSqlWhere="WHERE "?
+
+                    if (!UnsafeSqlWhere.TrimStart().StartsWith("WHERE", StringComparison.InvariantCultureIgnoreCase))
+                        SqlSelectAll += " WHERE ";
+
+                    SqlSelectAll += " ";
+                    SqlSelectAll += UnsafeSqlWhere;                        
+                }
+
+                var retCode = DsmAdmc.RunTSMCommandToList(SqlSelectAll, tsmlist);
+
+                if (retCode == AdmcExitCode.NotFound)
+                    return new List<T>();
+                else if (retCode == AdmcExitCode.Ok)
+                {
+                    List<List<string>> parsed = new List<List<string>>();
+
+                    int parseCount = CsvParser.Parse(tsmlist, parsed);
+
+                    //return CsvConvert.ConvertUnsafe<T>(parsed);
+                    return CsvConvert.Convert<T>(parsed, myType, cols);
+                }
+                else
+                    throw new ApplicationException(string.Format(
+                        "Failed to run query '{0}'", SqlSelectAll));
+            }
+            else
+                throw new ApplicationException(string.Format(
+                    "Failed to generate Select query for '{0}'", myType.TypeName));
+
+            throw new NotImplementedException();
+        }
+
+
+        //public List<T> SelectAll<T>() where T : new()
+        //{
+        //    var type = typeof(T);
+        //    var myType = Reflection.Instance.GetTypeInfo(type.FullName, type);
+
+        //    //var tabschema = GetTableSchema(myType.TableName);
+
+        //    var cols = GetFilteredColumnInfo(myType);
+
+        //    var tsmlist = new List<string>();
+
+        //    var q = string.Format("SELECT * FROM {0}", myType.TableName);
+
+        //    var retCode = DsmAdmc.RunTSMCommandToList(q, tsmlist);
+
+        //    if (retCode == AdmcExitCode.NotFound)
+        //        return new List<T>(); // return null instead?
+        //    else if(retCode == AdmcExitCode.Ok)
+        //    {
+        //        List<List<string>> parsed = new List<List<string>>();
+
+        //        int parseCount = CsvParser.Parse(tsmlist, parsed);
+
+        //        //return CsvConvert.ConvertUnsafe<T>(parsed);
+        //        return CsvConvert.Convert<T>(parsed, myType, cols);
+        //    }
+
+
+        //    throw new NotImplementedException();
+        //}
+
         /// <summary>
         /// Runs any tsm sql query and uses column AS to match data to property.
+        /// DOES NOT USE TSM SCHEMA.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="UnsafeSQLWithASColumns"></param>
