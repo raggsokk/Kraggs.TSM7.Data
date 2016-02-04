@@ -51,7 +51,7 @@
     <Compile Include="Reflection\Reflection_Cache.cs" />
     <Compile Include="Schema\clsSchemaColumn.cs" />
     <Compile Include="Schema\clsSchemaTable.cs" />
-    <Compile Include="Schema\clsSelectAllCacheItem.cs" />
+    <Compile Include="Schema\clsQueryCacheItem.cs" />
     <Compile Include="TSMConnection.cs" />
   </ItemGroup>
   <ItemGroup>

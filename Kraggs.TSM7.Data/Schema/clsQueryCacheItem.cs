@@ -27,7 +27,7 @@ namespace Kraggs.TSM7.Data.Schema
 {
     [DebuggerDisplay("{MyType.TypeName}")]
     [DebuggerNonUserCode()]
-    internal class clsSelectAllCacheItem
+    internal class clsQueryCacheItem
     {
         public clsTypeInfo MyType { get; set; }   // A reference is smaller than a string... I think.     
         public List<clsColumnInfo> Columns { get; set; }

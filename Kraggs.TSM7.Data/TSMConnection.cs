@@ -52,19 +52,27 @@ namespace Kraggs.TSM7.Data
 
         internal SortedDictionary<string, clsSchemaTable> pSchema { get; set; }
 
-        internal SortedDictionary<string, clsSelectAllCacheItem> pCacheSelect { get; set; }
+        internal SortedDictionary<string, clsQueryCacheItem> pCacheSelect { get; set; }
+        internal SortedDictionary<string, clsQueryCacheItem> pCacheSelectAS { get; set; }
 
-        [Obsolete]
-        internal SortedDictionary<string, List<clsColumnInfo>> pCache { get; set; }
+        //[Obsolete]
+        //internal SortedDictionary<string, List<clsColumnInfo>> pCache { get; set; }
 
         #region Static Constructors
 
+        /// <summary>
+        /// Dummy to prevent new
+        /// </summary>
         protected TSMConnection()
         {
-            // dummy.
-            
+            // dummy.            
         }
 
+        /// <summary>
+        /// Creates a TSMConnection wrapping existing dsmadmc class.
+        /// </summary>
+        /// <param name="dsmadmc"></param>
+        /// <returns></returns>
         public static TSMConnection CreateConnection(clsDsmAdmc dsmadmc)
         {
             var conn = new TSMConnection() { DsmAdmc = dsmadmc };
@@ -95,69 +103,66 @@ namespace Kraggs.TSM7.Data
             return conn;
         }
 
+        /// <summary>
+        /// Creates a new connection using providede settigns.
+        /// </summary>
+        /// <param name="Username"></param>
+        /// <param name="Password"></param>
+        /// <param name="Server"></param>
+        /// <param name="Port"></param>
+        /// <returns></returns>
+        public static TSMConnection CreateConnection(string Username, string Password, string Server, int? Port = null)
+        {
+            var dsmadmc = new clsDsmAdmc(Username, Password, Server, Port);
+
+            return CreateConnection(dsmadmc);
+        }
+
         #endregion
 
         #region Internal Functions
 
-        // filters the culumns from typeinfo with schema and version info.
-        // returns the combined result.
-        [Obsolete]
-        internal List<clsColumnInfo> GetFilteredColumnInfo(clsTypeInfo typeInfo)
-        {
-            // returns the
-            if (pCache == null)
-                pCache = new SortedDictionary<string, List<clsColumnInfo>>();
+        //// filters the culumns from typeinfo with schema and version info.
+        //// returns the combined result.
+        //[Obsolete]
+        //internal List<clsColumnInfo> GetFilteredColumnInfo(clsTypeInfo typeInfo)
+        //{
+        //    // returns the
+        //    if (pCache == null)
+        //        pCache = new SortedDictionary<string, List<clsColumnInfo>>();
 
-            List<clsColumnInfo> cols = null;
+        //    List<clsColumnInfo> cols = null;
 
-            if(!pCache.TryGetValue(typeInfo.TypeName, out cols))
-            {
-                var tabschema = GetTableSchema(typeInfo.TableName);
-                cols = new List<clsColumnInfo>();
+        //    if(!pCache.TryGetValue(typeInfo.TypeName, out cols))
+        //    {
+        //        var tabschema = GetTableSchema(typeInfo.TableName);
+        //        cols = new List<clsColumnInfo>();
 
-                foreach(var sc in tabschema.Columns)
-                {
-                    clsColumnInfo f = null;
+        //        foreach(var sc in tabschema.Columns)
+        //        {
+        //            clsColumnInfo f = null;
 
-                    if (typeInfo.ColumnHash.TryGetValue(sc.ColName, out f))
-                    {
-                        if (f.RequiredVersion != null)
-                        {
-                            if (f.RequiredVersion <= this.ServerVersion)
-                                cols.Add(f);
-                            else
-                                cols.Add(null);
-                        }
-                        else
-                            cols.Add(f);
-                    }
-                    else
-                        cols.Add(null); // null means skip value.
-                }
+        //            if (typeInfo.ColumnHash.TryGetValue(sc.ColName, out f))
+        //            {
+        //                if (f.RequiredVersion != null)
+        //                {
+        //                    if (f.RequiredVersion <= this.ServerVersion)
+        //                        cols.Add(f);
+        //                    else
+        //                        cols.Add(null);
+        //                }
+        //                else
+        //                    cols.Add(f);
+        //            }
+        //            else
+        //                cols.Add(null); // null means skip value.
+        //        }
 
-                ////var verColumns = CommonFunction.GetColumnsByVersion(typeInfo, this.ServerVersion);
+        //        pCache.Add(typeInfo.TypeName, cols);                
+        //    }
 
-                //var arr = new clsColumnInfo[tabschema.ColCount];
-
-                //foreach(var c in tabschema.Columns)
-                //{
-                //    var f = typeInfo.ColumnHash[c.ColName];
-
-                //    if(f != null)
-                //    {
-                //        if(f.RequiredVersion != null)
-                //            if(f.RequiredVersion <= this.ServerVersion)
-                //                arr[]
-                //    }
-                //}
-
-                //cols = arr.ToList();
-                //cols = CommonFunction.GetColumnsByVersion(typeInfo, this.ServerVersion).ToList();
-                pCache.Add(typeInfo.TypeName, cols);                
-            }
-
-            return cols;
-        }
+        //    return cols;
+        //}
 
         internal clsSchemaTable GetTableSchema(string tablename)
         {
@@ -228,9 +233,9 @@ namespace Kraggs.TSM7.Data
             //TODO: Change ExplicitQuery to MaxLength instead?
 
             if (pCacheSelect == null)
-                pCacheSelect = new SortedDictionary<string, clsSelectAllCacheItem>();
+                pCacheSelect = new SortedDictionary<string, clsQueryCacheItem>();
 
-            clsSelectAllCacheItem cachedSelect = null;
+            clsQueryCacheItem cachedSelect = null;
 
             if (!pCacheSelect.TryGetValue(myType.TypeName, out cachedSelect))
             {
@@ -265,7 +270,7 @@ namespace Kraggs.TSM7.Data
 
                 sb.AppendFormat(" FROM {0}", myType.TableName);
 
-                cachedSelect = new clsSelectAllCacheItem()
+                cachedSelect = new clsQueryCacheItem()
                 {
                     MyType = myType,
                     SelectAll = sb.ToString(),
@@ -326,7 +331,7 @@ namespace Kraggs.TSM7.Data
                 throw new ApplicationException(string.Format(
                     "Failed to generate Select query for '{0}'", myType.TypeName));
 
-            throw new NotImplementedException();
+            throw new NotImplementedException("You should never reach here...");
         }
 
         /// <summary>
@@ -384,44 +389,14 @@ namespace Kraggs.TSM7.Data
                 throw new ApplicationException(string.Format(
                     "Failed to generate Select query for '{0}'", myType.TypeName));
 
-            throw new NotImplementedException();
+            throw new NotImplementedException("You should never reach here...");
         }
 
 
-        //public List<T> SelectAll<T>() where T : new()
-        //{
-        //    var type = typeof(T);
-        //    var myType = Reflection.Instance.GetTypeInfo(type.FullName, type);
-
-        //    //var tabschema = GetTableSchema(myType.TableName);
-
-        //    var cols = GetFilteredColumnInfo(myType);
-
-        //    var tsmlist = new List<string>();
-
-        //    var q = string.Format("SELECT * FROM {0}", myType.TableName);
-
-        //    var retCode = DsmAdmc.RunTSMCommandToList(q, tsmlist);
-
-        //    if (retCode == AdmcExitCode.NotFound)
-        //        return new List<T>(); // return null instead?
-        //    else if(retCode == AdmcExitCode.Ok)
-        //    {
-        //        List<List<string>> parsed = new List<List<string>>();
-
-        //        int parseCount = CsvParser.Parse(tsmlist, parsed);
-
-        //        //return CsvConvert.ConvertUnsafe<T>(parsed);
-        //        return CsvConvert.Convert<T>(parsed, myType, cols);
-        //    }
-
-
-        //    throw new NotImplementedException();
-        //}
-
         /// <summary>
         /// Runs any tsm sql query and uses column AS to match data to property.
-        /// DOES NOT USE TSM SCHEMA.
+        /// COLUMN NAMES IS CASESENSITIVE.
+        /// DOES NOT USE TSM SCHEMA/TSMVERSION
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="UnsafeSQLWithASColumns"></param>
@@ -444,59 +419,84 @@ namespace Kraggs.TSM7.Data
         /// <returns></returns>
         public List<T> SelectAS<T>(string UnsafeSQLWithASColumns) where T : new()
         {
-            if (!UnsafeSQLWithASColumns.StartsWith("SELECT", StringComparison.InvariantCultureIgnoreCase))
+            if (!UnsafeSQLWithASColumns.StartsWith("SELECT ", StringComparison.InvariantCultureIgnoreCase))
                 throw new ArgumentException(string.Format(
-                    "The argument '{0}' does not start with 'SELECT'", nameof(UnsafeSQLWithASColumns)));
+                    "The argument '{0}' does not start with 'SELECT '", nameof(UnsafeSQLWithASColumns)));
 
             var posFrom = UnsafeSQLWithASColumns.IndexOf("FROM", StringComparison.InvariantCultureIgnoreCase);
             if(posFrom == -1)
                 throw new ArgumentException(string.Format(
                     "The argument '{0}' does not contain 'FROM'", nameof(UnsafeSQLWithASColumns)));
 
-            //var sb = new StringBuilder();
+            var type = typeof(T);
+            var myType = Reflection.Instance.GetTypeInfo(type.FullName, type);            
 
-            var parts = new List<string>();
+            // create key out of column data and from tables since we cache type info based on this data.
+            //TODO: Should key be toUpperInvariant??
+            string keySelect = null;
+            var posWhere = UnsafeSQLWithASColumns.IndexOf("WHERE", StringComparison.InvariantCultureIgnoreCase);
+            if (posWhere != -1)
+                keySelect = myType.TypeName + UnsafeSQLWithASColumns.Substring(7, posWhere - 7);
+            else
+                keySelect = myType.TypeName + UnsafeSQLWithASColumns.Substring(7);
+            //var keySelect = UnsafeSQLWithASColumns.Substring(7, posFrom - 7);
 
-            //HACK Implementation for getting 'AS "ColumnName"' data.
-            for(int i = 7; i < posFrom; i++)
+            clsQueryCacheItem cachedSelect = null;
+            //List<clsColumnInfo> cols = null;
+            
+
+            if (pCacheSelectAS == null)
+                pCacheSelectAS = new SortedDictionary<string, clsQueryCacheItem>();
+
+            if (!pCacheSelectAS.TryGetValue(keySelect, out cachedSelect))
             {
-                var posAS = UnsafeSQLWithASColumns.IndexOf("AS", i, StringComparison.InvariantCultureIgnoreCase);
+                cachedSelect = new clsQueryCacheItem();
 
-                if (posAS == -1)
-                    break;
-                else if(UnsafeSQLWithASColumns[posAS + 2] == ' ' && UnsafeSQLWithASColumns[posAS + 3] == '"')
+                // this code actually has a bug. it removes the "" around column names...
+                // but it saves us from doeing this later anyway. It just dont support column names 
+                // with spaces which we dont either so...
+                var parts2 = CsvParser.Parse(UnsafeSQLWithASColumns.Substring(7, posFrom - 8));
+                // we now have toplevel correct parts.
+                // (why reinvent this when we can reuse the csv parser?)                
+
+                if (parts2.Count == 0)
+                    throw new ArgumentException(string.Format(                        
+                        "The argument '{0}' does not contain any columns statements we use to match value to property.", nameof(UnsafeSQLWithASColumns)));
+                else
                 {
-                    var posEnd = UnsafeSQLWithASColumns.IndexOf('"', posAS + 4);
-                    if (posEnd != 0)
-                        //parts.Add(UnsafeSQLWithASColumns.Substring(posAS + 4, posEnd - posAS - 4).Trim().ToUpperInvariant());
-                        parts.Add(UnsafeSQLWithASColumns.Substring(posAS + 4, posEnd - posAS - 4).Trim()); // case sensitive!
-                    i = posAS + 1;
+                    if (parts2.First().Trim() == "*")
+                        throw new NotImplementedException("Use selectall() instead?");
+
+                    var cols = new List<clsColumnInfo>();
+
+                    foreach (var l in parts2)
+                    {
+                        var posAs = l.LastIndexOf("AS", StringComparison.InvariantCultureIgnoreCase);
+
+                        var cname = l.Substring(posAs + 3);
+                        if (cname[0] == '"') // this should never trigger because of bug in csv parser....
+                            cname = cname.Substring(1, cname.Length - 2);
+
+                        clsColumnInfo ci = null;
+                        if (myType.ColumnHash.TryGetValue(cname, out ci))
+                            cols.Add(ci);
+                        else if (myType.MemberHash.TryGetValue(cname, out ci))
+                            cols.Add(ci);
+                        else
+                            cols.Add(null); // make converter skip one line forward to match order of data returned.
+                    }
+
+                    cachedSelect.MyType = myType;
+                    cachedSelect.SelectAll = keySelect;
+                    cachedSelect.Columns = cols;
+
+                    pCacheSelectAS.Add(keySelect, cachedSelect);
                 }
             }
-
-            if(parts.Count == 0)
-                throw new ArgumentException(string.Format(
-                    "The argument '{0}' does not contain any 'AS \"ColumnName\"' statements used to match value to property!", nameof(UnsafeSQLWithASColumns)));
-
-            foreach (var l in parts)
-                Console.WriteLine(l);
-
-            var type = typeof(T);
-            var myType = Reflection.Instance.GetTypeInfo(type.FullName, type);
-
-            //List<clsColumnInfo> cols = null;
-            List<clsColumnInfo> cols = new List<clsColumnInfo>();
-
-            foreach (var l in parts)
-            {
-                clsColumnInfo ci = null;
-
-                if (myType.ColumnHash.TryGetValue(l, out ci))
-                    cols.Add(ci);
-            }
-
+            
             var tsmlist = new List<string>();
 
+            // Note that we still use provided sql query instead of cached one each time.
             var retCode = DsmAdmc.RunTSMCommandToList(UnsafeSQLWithASColumns, tsmlist);
 
             if (retCode == AdmcExitCode.NotFound)
@@ -508,10 +508,10 @@ namespace Kraggs.TSM7.Data
                 int parseCount = CsvParser.Parse(tsmlist, parsed);
 
                 //return CsvConvert.ConvertUnsafe<T>(parsed);
-                return CsvConvert.Convert<T>(parsed, myType, cols);
+                return CsvConvert.Convert<T>(parsed, cachedSelect.MyType, cachedSelect.Columns);
             }
 
-            throw new NotImplementedException();
+            throw new NotImplementedException("retCode");
         }
 
         #endregion
