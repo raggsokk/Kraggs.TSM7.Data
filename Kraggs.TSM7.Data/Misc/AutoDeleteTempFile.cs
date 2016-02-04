@@ -36,6 +36,7 @@ namespace Kraggs.TSM7.Data.Misc
         {
             //Stream = new FileStream(pTempFile, FileMode.CreateNew,
             //    FileAccess.ReadWrite,)
+            TempFile = Path.GetTempFileName();
         }
 
         public void Open(bool AutoDelete = true, bool Async = true)

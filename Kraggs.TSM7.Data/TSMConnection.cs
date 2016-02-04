@@ -21,10 +21,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using System.IO;
 using System.Diagnostics;
 
 using Kraggs.TSM7.Utils;
 using Kraggs.TSM7.Data.Schema;
+
 
 namespace Kraggs.TSM7.Data
 {
@@ -65,7 +67,7 @@ namespace Kraggs.TSM7.Data
         /// </summary>
         protected TSMConnection()
         {
-            // dummy.            
+            // dummy. 
         }
 
         /// <summary>
@@ -286,31 +288,22 @@ namespace Kraggs.TSM7.Data
             return true;
         }
 
-        #endregion
-
-        #region Functions
-
         /// <summary>
-        /// Selects all rows from table, generating a SelectAll query combining data from TSM Server Schema and from Reflection breakdown of user provided type.
+        /// Internal Standard ErrorHandling Code.
         /// </summary>
         /// <typeparam name="T"></typeparam>
+        /// <param name="myType"></param>
+        /// <param name="cols"></param>
+        /// <param name="SqlQuery"></param>
+        /// <param name="UseTmpFile"></param>
         /// <returns></returns>
-        public List<T> SelectAll<T>(bool UseTmpFile = false) where T : new()
+        internal List<T> Execute<T>(clsTypeInfo myType, List<clsColumnInfo> cols, string SqlQuery, bool UseTmpFile = false)
         {
-            if (UseTmpFile)
-                throw new NotImplementedException();
-
-            var type = typeof(T);
-            var myType = Reflection.Instance.GetTypeInfo(type.FullName, type);
-
-            List<clsColumnInfo> cols = null;
-            string SqlSelectAll = string.Empty;
-
-            if (CreateSelectAll(myType, out SqlSelectAll, out cols, true))
+            if(!UseTmpFile)
             {
                 var tsmlist = new List<string>();
 
-                var retCode = DsmAdmc.RunTSMCommandToList(SqlSelectAll, tsmlist);                
+                var retCode = DsmAdmc.RunTSMCommandToList(SqlQuery, tsmlist);
 
                 if (retCode == AdmcExitCode.NotFound)
                     return new List<T>();
@@ -323,9 +316,124 @@ namespace Kraggs.TSM7.Data
                     //return CsvConvert.ConvertUnsafe<T>(parsed);
                     return CsvConvert.Convert<T>(parsed, myType, cols);
                 }
+                // TODO: Add additional error checking code here.
                 else
                     throw new ApplicationException(string.Format(
-                        "Failed to run query '{0}'", SqlSelectAll));
+                        "Failed to run query '{0}'", SqlQuery));
+            }
+            else
+            {
+                using (var tmp = new Misc.AutoDeleteTempFile())
+                {
+                    var retCode = DsmAdmc.RunTSMCommandToFile(
+                        SqlQuery, tmp.TempFile);
+
+                    if (retCode == AdmcExitCode.NotFound)
+                        return new List<T>();
+                    else if (retCode == AdmcExitCode.Ok)
+                    {
+                        //TODO: block parse result aka read 100 lines, convert and add to result, repeat.
+                        tmp.Open();
+                        var reader = new StreamReader(tmp.Stream);
+
+                        List<List<string>> parsed = new List<List<string>>();
+                        var result = new List<T>();
+
+                        var sb = new StringBuilder();
+                        var count = 0;
+
+                        do
+                        {
+                            string s = string.Empty;
+                            while ((s = reader.ReadLine()) != null)
+                            {
+                                parsed.Add(CsvParser.Parse(s, sb));
+                                count++;
+                                if (count == 1024)
+                                    break;
+                            }
+
+                            // todo: ask reader to prefil next 4096 lines of bytes while converting?
+                            result.AddRange(CsvConvert.Convert<T>(parsed));
+                            parsed.Clear();
+                            count = 0;
+
+                        } while (!reader.EndOfStream);
+
+                        return result;
+                    }
+                    // TODO: Add additional error checking code here.
+                    else
+                        throw new ApplicationException(string.Format(
+                            "Failed to run query '{0}'", SqlQuery));
+
+                }
+            }
+        }
+
+        #endregion
+
+        #region Functions
+
+        /// <summary>
+        /// Retrive the names of the columns for the table matching type.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        [DebuggerNonUserCode()]
+        public List<string> GetTSMColumns<T>()
+        {
+            var type = typeof(T);
+            var myType = Reflection.Instance.GetTypeInfo(type.FullName, type);
+
+            var tabschema = GetTableSchema(myType.TableName);
+
+            var colnames = new List<string>();
+
+            foreach (var t in tabschema.Columns)
+                colnames.Add(t.ColName);
+
+            return colnames;
+        }
+
+        /// <summary>
+        /// Selects all rows from table, generating a SelectAll query combining data from TSM Server Schema and from Reflection breakdown of user provided type.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public List<T> SelectAll<T>(bool UseTmpFile = false) where T : new()
+        {
+            //if (UseTmpFile)
+            //    throw new NotImplementedException();
+
+            var type = typeof(T);
+            var myType = Reflection.Instance.GetTypeInfo(type.FullName, type);
+
+            List<clsColumnInfo> cols = null;
+            string SqlSelectAll = string.Empty;
+
+            if (CreateSelectAll(myType, out SqlSelectAll, out cols, true))
+            {
+                return Execute<T>(myType, cols, SqlSelectAll, UseTmpFile);
+
+                //var tsmlist = new List<string>();
+
+                //var retCode = DsmAdmc.RunTSMCommandToList(SqlSelectAll, tsmlist);                
+
+                //if (retCode == AdmcExitCode.NotFound)
+                //    return new List<T>();
+                //else if (retCode == AdmcExitCode.Ok)
+                //{
+                //    List<List<string>> parsed = new List<List<string>>();
+
+                //    int parseCount = CsvParser.Parse(tsmlist, parsed);
+
+                //    //return CsvConvert.ConvertUnsafe<T>(parsed);
+                //    return CsvConvert.Convert<T>(parsed, myType, cols);
+                //}
+                //else
+                //    throw new ApplicationException(string.Format(
+                //        "Failed to run query '{0}'", SqlSelectAll));
             }
             else
                 throw new ApplicationException(string.Format(
@@ -343,8 +451,8 @@ namespace Kraggs.TSM7.Data
         /// <returns></returns>
         public List<T> Where<T>(string UnsafeSqlWhere, bool UseTmpFile = false) where T : new()
         {
-            if (UseTmpFile)
-                throw new NotImplementedException();
+            //if (UseTmpFile)
+            //    throw new NotImplementedException();
 
             var type = typeof(T);
             var myType = Reflection.Instance.GetTypeInfo(type.FullName, type);
@@ -354,7 +462,7 @@ namespace Kraggs.TSM7.Data
 
             if (CreateSelectAll(myType, out SqlSelectAll, out cols, true))
             {
-                var tsmlist = new List<string>();
+                //var tsmlist = new List<string>();
 
                 //Only when unsafe sql where is actually something does we call this function.
                 if(!string.IsNullOrWhiteSpace(UnsafeSqlWhere))
@@ -368,22 +476,24 @@ namespace Kraggs.TSM7.Data
                     SqlSelectAll += UnsafeSqlWhere;                        
                 }
 
-                var retCode = DsmAdmc.RunTSMCommandToList(SqlSelectAll, tsmlist);
+                return Execute<T>(myType, cols, SqlSelectAll, UseTmpFile);
 
-                if (retCode == AdmcExitCode.NotFound)
-                    return new List<T>();
-                else if (retCode == AdmcExitCode.Ok)
-                {
-                    List<List<string>> parsed = new List<List<string>>();
+                //var retCode = DsmAdmc.RunTSMCommandToList(SqlSelectAll, tsmlist);
 
-                    int parseCount = CsvParser.Parse(tsmlist, parsed);
+                //if (retCode == AdmcExitCode.NotFound)
+                //    return new List<T>();
+                //else if (retCode == AdmcExitCode.Ok)
+                //{
+                //    List<List<string>> parsed = new List<List<string>>();
 
-                    //return CsvConvert.ConvertUnsafe<T>(parsed);
-                    return CsvConvert.Convert<T>(parsed, myType, cols);
-                }
-                else
-                    throw new ApplicationException(string.Format(
-                        "Failed to run query '{0}'", SqlSelectAll));
+                //    int parseCount = CsvParser.Parse(tsmlist, parsed);
+
+                //    //return CsvConvert.ConvertUnsafe<T>(parsed);
+                //    return CsvConvert.Convert<T>(parsed, myType, cols);
+                //}
+                //else
+                //    throw new ApplicationException(string.Format(
+                //        "Failed to run query '{0}'", SqlSelectAll));
             }
             else
                 throw new ApplicationException(string.Format(
@@ -417,7 +527,7 @@ namespace Kraggs.TSM7.Data
         /// ]]>
         /// </example>
         /// <returns></returns>
-        public List<T> SelectAS<T>(string UnsafeSQLWithASColumns) where T : new()
+        public List<T> SelectAS<T>(string UnsafeSQLWithASColumns, bool UseTmpFile = false) where T : new()
         {
             if (!UnsafeSQLWithASColumns.StartsWith("SELECT ", StringComparison.InvariantCultureIgnoreCase))
                 throw new ArgumentException(string.Format(
@@ -493,25 +603,28 @@ namespace Kraggs.TSM7.Data
                     pCacheSelectAS.Add(keySelect, cachedSelect);
                 }
             }
-            
-            var tsmlist = new List<string>();
 
-            // Note that we still use provided sql query instead of cached one each time.
-            var retCode = DsmAdmc.RunTSMCommandToList(UnsafeSQLWithASColumns, tsmlist);
+            return Execute<T>(myType, cachedSelect.Columns, UnsafeSQLWithASColumns, UseTmpFile);
 
-            if (retCode == AdmcExitCode.NotFound)
-                return new List<T>();
-            else if (retCode == AdmcExitCode.Ok)
-            {
-                List<List<string>> parsed = new List<List<string>>();
 
-                int parseCount = CsvParser.Parse(tsmlist, parsed);
+            //var tsmlist = new List<string>();
 
-                //return CsvConvert.ConvertUnsafe<T>(parsed);
-                return CsvConvert.Convert<T>(parsed, cachedSelect.MyType, cachedSelect.Columns);
-            }
+            //// Note that we still use provided sql query instead of cached one each time.
+            //var retCode = DsmAdmc.RunTSMCommandToList(UnsafeSQLWithASColumns, tsmlist);
 
-            throw new NotImplementedException("retCode");
+            //if (retCode == AdmcExitCode.NotFound)
+            //    return new List<T>();
+            //else if (retCode == AdmcExitCode.Ok)
+            //{
+            //    List<List<string>> parsed = new List<List<string>>();
+
+            //    int parseCount = CsvParser.Parse(tsmlist, parsed);
+
+            //    //return CsvConvert.ConvertUnsafe<T>(parsed);
+            //    return CsvConvert.Convert<T>(parsed, cachedSelect.MyType, cachedSelect.Columns);
+            //}
+
+            //throw new NotImplementedException("retCode");
         }
 
         #endregion
