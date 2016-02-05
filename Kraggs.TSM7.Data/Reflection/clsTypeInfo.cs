@@ -88,9 +88,20 @@ namespace Kraggs.TSM7.Data
         [DebuggerNonUserCode()]
         public void Add(clsColumnInfo ci)
         {
-            Columns.Add(ci);
-            ColumnHash.Add(ci.ColumnName, ci);
-            MemberHash.Add(ci.MemberName, ci);
+            if(ColumnHash.ContainsKey(ci.ColumnName))
+            {
+                // TODO: how should we react to this?
+                // we can actually report 
+                throw new ArgumentException(string.Format(
+                    "ColumnName '{0}' is already registered. Column Names are not case sensitive and must be unique on a given type. Offending Property/Field: '{1}'", ci.ColumnName, ci.MemberName));
+            }
+            else
+            {
+                Columns.Add(ci);
+                ColumnHash.Add(ci.ColumnName, ci);
+                //ColumnHash.Add(ci.ColumnName.ToUpperInvariant(), ci);
+                MemberHash.Add(ci.MemberName, ci);
+            }
         }
     }
 }

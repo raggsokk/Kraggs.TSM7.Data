@@ -123,6 +123,7 @@ namespace Kraggs.TSM7.Data
                     cT.ColumnName = attribColumn.ColumnName;
                 else
                     cT.ColumnName = cT.MemberName;
+                cT.ColumnName = cT.ColumnName.ToUpperInvariant();
 
                 // TSM version attrib?
                 var attribVersion = p.GetCustomAttribute<TSMVersionAttribute>();
@@ -138,6 +139,8 @@ namespace Kraggs.TSM7.Data
                 if (cT.MemberType.IsGenericType &&
                     cT.MemberType.GetGenericTypeDefinition() == typeof(Nullable))
                         cT.IsNullable = true;                
+
+
 
                 myType.Add(cT);
             }
