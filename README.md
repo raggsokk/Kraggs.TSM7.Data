@@ -3,15 +3,14 @@
 Kraggs.TSM7.Data is an extension to Kraggs.TSM7.Utils which
 adds some SQL Query capabilities.
 
-### TODO:
-* TSMQuery attribute. Update its usage (it replaces SelectAll Sql Generation.)
-* Aggregate (sum, count, etc).
-* Unions (select subset from several tables).
-* Limit (fetch first X rows only)
-* Nullable Types.
-* Handle string StartsWith and others.
 
-### Example: Where
+
+## Kraggs.TSM7.Attributes
+
+The library is build around creating C# POCOs with attributes describing the TSM DB2 Tables.
+These POCO classes can then be used by 2 separate code paths.
+
+Below are some examples for creating these POCO classes.
 
 First create a class to hold the returned data.
 
@@ -45,7 +44,114 @@ namespace Example
 }
 ```
 
-Then use for example the where extension to query data.
+## TSMConnection
+
+The TSMConnection class is the new way to interact with a TSM Server.
+It dynamically quires the TSM Server for version, platform and TSM Table layout. This information is cached in memory for the next quiery on the same TSM table.
+It then uses this information to dynamically build matching SELECT statements compatible with your Poco classes.
+Since it queries the TSM Server for schema information the order of the properties on the POCO does not matter.
+This code path should in theory work all the way back to TSM 5.5 servers. (not testet thou).
+
+
+You also dont have to use the attributes to map tsm table columns to the poco properties but that require at least case insensitive name matching.
+The exception to some of this is the SelectAS<T> function, but that is explained in more detail later.
+
+### Example: SelectAll
+
+Using example Poco 'NodeUsage' from above:
+
+```csharp
+using Kraggs.TSM7.Utils;
+using Kraggs.TSM7.Data;
+
+namespace Example
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            var dsmadmc = new clsDsmAdmc(...);
+
+			var conn = new TSMConnection(dsmadmc);
+
+			// select all rows.
+            var nodeUsage = conn.SelectAll<NodeUsage>();
+				        
+        }
+    }
+}
+```
+
+
+### Example: Where
+
+Using example Poco 'NodeUsage' from above:
+
+```csharp
+using Kraggs.TSM7.Utils;
+using Kraggs.TSM7.Data;
+
+namespace Example
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            var dsmadmc = new clsDsmAdmc(...);
+
+			var conn = new TSMConnection(dsmadmc);
+
+            var nodeUsage = conn.Where<NodeUsage>(
+				"WHERE Node_Name like 'TEST%'");                
+        }
+    }
+}
+```
+
+
+### Example: SelectAS
+
+SelectAS is a bit different. It still uses Version information from TSMConnection but it bypasses the TSM Schema (at least for now).
+
+It instead matches on the Sql AS alias command.
+Its primary purpose is then you need to create complex Sql statements, for example quering several tsm tables at the same time.
+
+Using example Poco 'NodeUsage' from above:
+
+```csharp
+using Kraggs.TSM7.Utils;
+using Kraggs.TSM7.Data;
+
+namespace Example
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            var dsmadmc = new clsDsmAdmc(...);
+
+			var conn = new TSMConnection(dsmadmc);
+
+            var nodeUsage = conn.SelectAS<NodeUsage>(
+				"SELECT Node_Name as NodeName, TOTAL_MB as TotalMB FROM AuditOcc WHERE Node_Name like 'TEST%'");
+        }
+    }
+}
+```
+
+This AS mathing is not as rebust as the above Where and SelectAll commands, but has a lot more query power.
+
+
+## DsmAdmcExtensions
+
+This class contains extensions for the clsDsmAdmc utility class from Kraggs.TSM7.Utils project.
+It is also the first code path created for this library.
+
+
+
+### Example: Where
+
+Using example Poco 'NodeUsage' from above:
 
 ```csharp
 using Kraggs.TSM7.Utils;
@@ -60,15 +166,15 @@ namespace Example
             var dsmadmc = new clsDsmAdmc(...);
 
             var nodeUsage = dsmadmc.Where<NodeUsage>(
-                x => x.NodeName == "TESTNODE");
+				"WHERE Node_Name like 'TEST%'");                
         }
     }
 }
 ```
 
-This will generate a sql query like this: 
+This will internally generate a sql query like this: 
 ```sql
-SELECT NODE_NAME,TOTAL_MB FROM AUDITOCC WHERE NODE_NAME = 'TESTNODE'
+SELECT NODE_NAME,TOTAL_MB FROM AUDITOCC WHERE NODE_NAME LIKE 'TEST%'
 ```
 
 The dsmadmc will be called with this query and return a csvlist of values.
@@ -162,10 +268,15 @@ namespace Example
 
 
 
+
+### TODO:
+* TSMQuery attribute. Update its usage (it replaces SelectAll Sql Generation.)
+* Nullable Types.
+
+
 ### Missing Tests:
 * ~~Convert GUID~~
 * ~~Convert DateTime~~
 * ~~Sql queries~~
 * Nullable types
 * Unit Tests
-* Proper Linq provider.
