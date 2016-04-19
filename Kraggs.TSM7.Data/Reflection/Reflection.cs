@@ -134,6 +134,9 @@ namespace Kraggs.TSM7.Data
 
         internal static GenericSetter CreateSetProperty(PropertyInfo propertyInfo)
         {
+            // apperantly getting private methods dont work later on.
+            // so for now disable getting private properties.
+            //var setMethod = propertyInfo.GetSetMethod(true);
             var setMethod = propertyInfo.GetSetMethod();
             if (setMethod == null)
                 return null;

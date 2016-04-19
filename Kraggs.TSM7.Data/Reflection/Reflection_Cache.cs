@@ -114,7 +114,7 @@ namespace Kraggs.TSM7.Data
 
                 var ignoreAttrib = p.GetCustomAttribute<TSMIgnore>();
                 if (ignoreAttrib != null)
-                    continue; //TODO: Should we instead mark prop as ignore but keep it?
+                    continue; //TODO: Should we instead mark prop as ignore but keep it?               
 
                 var cT = new clsColumnInfo() { MemberName = p.Name };
 
@@ -132,16 +132,32 @@ namespace Kraggs.TSM7.Data
 
                 // CSV Convert info
                 cT.MemberType = p.PropertyType;
+
+                // create set method. How about nullables?
+                // apperantly it already works...
                 cT.SetValue = CreateSetProperty(p);
-                cT.DataType = GetTSMDataType(p.PropertyType);
+                if (cT.SetValue == null)
+                {
+                    //failed to create setmethod. Then ignore this property field.
+                    continue;
+                }
 
                 //is nullable
-                if (cT.MemberType.IsGenericType &&
-                    cT.MemberType.GetGenericTypeDefinition() == typeof(Nullable))
-                        cT.IsNullable = true;                
+                if (!cT.MemberType.IsValueType || (Nullable.GetUnderlyingType(cT.MemberType)) != null)
+                {
+                    cT.IsNullable = true;
+                }
 
+                if(p.PropertyType.IsGenericType)
+                {
+                    cT.DataType = GetTSMDataType(p.PropertyType.GetGenericArguments()[0]);
+                }
+                else
+                {
+                    cT.DataType = GetTSMDataType(p.PropertyType);             
+                }
 
-
+                // if all went well add property to type list.
                 myType.Add(cT);
             }
 
