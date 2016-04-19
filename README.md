@@ -76,7 +76,7 @@ namespace Example
 
 			// select all rows.
             var nodeUsage = conn.SelectAll<NodeUsage>();
-				        
+
         }
     }
 }
@@ -172,13 +172,13 @@ namespace Example
 }
 ```
 
-This will internally generate a sql query like this: 
+This will internally generate a sql query like this:
 ```sql
 SELECT NODE_NAME,TOTAL_MB FROM AUDITOCC WHERE NODE_NAME LIKE 'TEST%'
 ```
 
 The dsmadmc will be called with this query and return a csvlist of values.
-After a successfull call, it will decode csv and convert to Generic Type 
+After a successfull call, it will decode csv and convert to Generic Type
 and return the data to caller.
 
 
@@ -271,12 +271,12 @@ namespace Example
 
 ### TODO:
 * TSMQuery attribute. Update its usage (it replaces SelectAll Sql Generation.)
-* Nullable Types.
+* ~~DB2 DateTime conversion~~
+* ~~.Net GUID Conversion~~
+* ~~Nullable Types~~
+* ~~Enum Support~~
 
 
 ### Missing Tests:
-* ~~Convert GUID~~
-* ~~Convert DateTime~~
 * ~~Sql queries~~
-* Nullable types
 * Unit Tests
