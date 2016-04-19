@@ -105,7 +105,8 @@ namespace Kraggs.TSM7.Data
                         case TSMDataType.Enum:
                             oset = ParseTSMEnum(value, column.MemberType); break;
                         default:
-                            throw new NotImplementedException();
+                            throw new NotImplementedException(string.Format(
+                                "The type '{0}' doesnt have parser code implemented yet.", column.MemberType));
 
                     }
                     column.SetValue(o, oset);
@@ -181,7 +182,16 @@ namespace Kraggs.TSM7.Data
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static object ParseTSMEnum(string value, Type EnumType)
         {
-            return Enum.Parse(EnumType, value);
+            //TODO: Add default value handling instead of try/catch?
+            try
+            {
+                return Enum.Parse(EnumType, value);
+            }
+            catch(ArgumentException)
+            {
+                throw new ArgumentException(string.Format(
+                    "Failed to parse value '{0}' into enum '{1}'.", value, EnumType.Name));
+            }
         }
     }
 }

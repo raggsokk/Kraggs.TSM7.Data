@@ -114,7 +114,7 @@ namespace Kraggs.TSM7.Data
                     throw new NotImplementedException(exp.NodeType.ToString());
             }
 
-            return false;
+            //return false;
         }
 
         internal static void SafeValue(StringBuilder sb, object obj, Type t)
