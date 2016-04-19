@@ -102,6 +102,8 @@ namespace Kraggs.TSM7.Data
                             oset = ParseDB2DateTime(value); break;
                         case TSMDataType.Guid:
                             oset = ParseTSMGuid(value); break;
+                        case TSMDataType.Enum:
+                            oset = ParseTSMEnum(value, column.MemberType); break;
                         default:
                             throw new NotImplementedException();
 
@@ -174,6 +176,12 @@ namespace Kraggs.TSM7.Data
                 return true;
             else
                 return false;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static object ParseTSMEnum(string value, Type EnumType)
+        {
+            return Enum.Parse(EnumType, value);
         }
     }
 }

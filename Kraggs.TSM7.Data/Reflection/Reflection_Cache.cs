@@ -143,7 +143,10 @@ namespace Kraggs.TSM7.Data
                 }
 
                 //is nullable
-                if (!cT.MemberType.IsValueType || (Nullable.GetUnderlyingType(cT.MemberType)) != null)
+                var nullableType = Nullable.GetUnderlyingType(cT.MemberType);
+
+
+                if (!cT.MemberType.IsValueType || nullableType != null)
                 {
                     cT.IsNullable = true;
                 }
@@ -157,6 +160,16 @@ namespace Kraggs.TSM7.Data
                     cT.DataType = GetTSMDataType(p.PropertyType);             
                 }
 
+                if(cT.IsNullable && cT.DataType == TSMDataType.Enum)
+                {
+                    // store the enum type instead of the generic nullable type.
+                    cT.MemberType = nullableType;
+                }
+                //else if(p.PropertyType.IsEnum)
+                //{
+                //    cT.DataType = TSMDataType.Enum;
+                //}
+
                 // if all went well add property to type list.
                 myType.Add(cT);
             }
@@ -167,7 +180,9 @@ namespace Kraggs.TSM7.Data
 
         internal static TSMDataType GetTSMDataType(Type t)
         {
-            if (t == typeof(String))
+            if (t.IsEnum)
+                return TSMDataType.Enum;
+            else if (t == typeof(String))
                 return TSMDataType.String;
             else if (t == typeof(short))
                 return TSMDataType.Short;

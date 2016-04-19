@@ -68,5 +68,9 @@ namespace Kraggs.TSM7.Data
         /// </summary>
         Guid,
 
+        /// <summary>
+        /// Column is represented by an enum.
+        /// </summary>
+        Enum
     }
 }
