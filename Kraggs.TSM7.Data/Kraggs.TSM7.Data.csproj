@@ -1,72 +1,39 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{A84837A5-10A8-4DD0-A69E-FE064273B35C}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Kraggs.TSM7.Data</RootNamespace>
-    <AssemblyName>Kraggs.TSM7.Data</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <TargetFrameworkProfile />
+    <TargetFrameworks>netstandard1.3;net46</TargetFrameworks>
+    <Description>Sql interface to DsmAdmc.</Description>
+    <PackageProjectUrl>https://github.com/raggsokk/Kraggs.TSM7.Data</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/raggsokk/Kraggs.TSM7.Data</RepositoryUrl>
+    <RepositoryType>github</RepositoryType>
+    <AssemblyVersion>0.5.0.0</AssemblyVersion>
+    <FileVersion>0.5.0.0</FileVersion>
+    <Copyright>Copyright © 2017 Jarle Hansen</Copyright>
+    <Version>0.5.0</Version>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
+
   <ItemGroup>
-    <Reference Include="Kraggs.TSM7">
-      <HintPath>..\..\..\..\..\Repository7\github\tsm\Kraggs.TSM7.Utils\Kraggs.TSM7.Utils\bin\Release\Kraggs.TSM7.dll</HintPath>
+    <ProjectReference Include="..\Kraggs.TSM7.Attributes\Kraggs.TSM7.Attributes.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard1.3'">
+    <PackageReference Include="System.Reflection.Emit.ILGeneration" Version="4.3.0" />
+    <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.3.0" />
+    
+    <Reference Include="Kraggs.TSM7.Utils">
+      <HintPath>..\..\Kraggs.TSM7.Utils\Kraggs.TSM7.Utils\bin\Release\netstandard1.3\Kraggs.TSM7.Utils.dll</HintPath>
     </Reference>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
-  <ItemGroup>
-    <Compile Include="CommonFunction.cs" />
-    <Compile Include="Csv\CsvConvert.cs" />
-    <Compile Include="Csv\CsvParser.cs" />
-    <Compile Include="DsmAdmcExtensions.cs" />
-    <Compile Include="ExpressionHelper.cs" />
-    <Compile Include="Misc\AutoDeleteTempFile.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Reflection\clsColumnInfo.cs" />
-    <Compile Include="Reflection\clsTypeInfo.cs" />
-    <Compile Include="Reflection\Reflection.cs" />
-    <Compile Include="Reflection\Reflection_Cache.cs" />
-    <Compile Include="Schema\clsSchemaColumn.cs" />
-    <Compile Include="Schema\clsSchemaTable.cs" />
-    <Compile Include="Schema\clsQueryCacheItem.cs" />
-    <Compile Include="TSMConnection.cs" />
+  
+  <ItemGroup Condition="'$(TargetFramework)' == 'net46'">
+    <PackageReference Remove="NETStandard.Library" />
+    <Reference Include="Kraggs.TSM7.Utils">
+      <HintPath>..\..\Kraggs.TSM7.Utils\Kraggs.TSM7.Utils\bin\Release\net46\Kraggs.TSM7.Utils.dll</HintPath>
+    </Reference>
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Kraggs.TSM7.Attributes\Kraggs.TSM7.Attributes.csproj">
-      <Project>{a4396b49-e23b-476a-9d64-2d001526e05e}</Project>
-      <Name>Kraggs.TSM7.Attributes</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
+
 </Project>

@@ -78,7 +78,7 @@ namespace Kraggs.TSM7.Data
             }
             
             // uber simple validation.
-            if (!UnsafeSQL.StartsWith("SELECT", StringComparison.InvariantCultureIgnoreCase))
+            if (!UnsafeSQL.StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
                 throw new ArgumentException("SQL Query MUST start with SELECT", "UnsafeSQL");
 
             return CommonFunction.Execute<T>(dsmadmc, UnsafeSQL, UseTmpFile);
@@ -102,7 +102,7 @@ namespace Kraggs.TSM7.Data
                 throw new ArgumentNullException("UnsafeWhereSQL");
             }
 
-            if(!UnsafeWhereSQL.StartsWith("WHERE ", StringComparison.InvariantCultureIgnoreCase))
+            if(!UnsafeWhereSQL.StartsWith("WHERE ", StringComparison.OrdinalIgnoreCase))
             {
                 throw new ArgumentException("UnsafeWhereSQL must start with WHERE");
             }
@@ -162,7 +162,7 @@ namespace Kraggs.TSM7.Data
                     return v;
             }
 
-            throw new ApplicationException("Failed to obtain TSM Instance version");
+            throw new Exception("Failed to obtain TSM Instance version");
         }
 
         #endregion

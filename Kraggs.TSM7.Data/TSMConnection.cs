@@ -99,7 +99,7 @@ namespace Kraggs.TSM7.Data
                 conn.ServerVersion = new Version(string.Format("{0}.{1}.{2}.{3}", data[2], data[3], data[4], data[5]));
             }
             else
-                throw new ApplicationException("Failed to retrive TSM Server Info.");
+                throw new Exception("Failed to retrive TSM Server Info.");
 
 
             return conn;
@@ -216,7 +216,7 @@ namespace Kraggs.TSM7.Data
                     return table;
                 }
                 else
-                    throw new ApplicationException(string.Format(
+                    throw new Exception(string.Format(
                         "Failed to retrive Table Schema for table '{0}'", tupper));
             }
         }
@@ -318,7 +318,7 @@ namespace Kraggs.TSM7.Data
                 }
                 // TODO: Add additional error checking code here.
                 else
-                    throw new ApplicationException(string.Format(
+                    throw new Exception(string.Format(
                         "Failed to run query '{0}'", SqlQuery));
             }
             else
@@ -364,7 +364,7 @@ namespace Kraggs.TSM7.Data
                     }
                     // TODO: Add additional error checking code here.
                     else
-                        throw new ApplicationException(string.Format(
+                        throw new Exception(string.Format(
                             "Failed to run query '{0}'", SqlQuery));
 
                 }
@@ -436,7 +436,7 @@ namespace Kraggs.TSM7.Data
                 //        "Failed to run query '{0}'", SqlSelectAll));
             }
             else
-                throw new ApplicationException(string.Format(
+                throw new Exception(string.Format(
                     "Failed to generate Select query for '{0}'", myType.TypeName));
 
             throw new NotImplementedException("You should never reach here...");
@@ -469,7 +469,7 @@ namespace Kraggs.TSM7.Data
                 {
                     //TODO: check for empty where statement and ignore them aka UnsafeSqlWhere="WHERE "?
 
-                    if (!UnsafeSqlWhere.TrimStart().StartsWith("WHERE", StringComparison.InvariantCultureIgnoreCase))
+                    if (!UnsafeSqlWhere.TrimStart().StartsWith("WHERE", StringComparison.OrdinalIgnoreCase))
                         SqlSelectAll += " WHERE ";
 
                     SqlSelectAll += " ";
@@ -496,7 +496,7 @@ namespace Kraggs.TSM7.Data
                 //        "Failed to run query '{0}'", SqlSelectAll));
             }
             else
-                throw new ApplicationException(string.Format(
+                throw new Exception(string.Format(
                     "Failed to generate Select query for '{0}'", myType.TypeName));
 
             throw new NotImplementedException("You should never reach here...");
@@ -529,22 +529,22 @@ namespace Kraggs.TSM7.Data
         /// <returns></returns>
         public List<T> SelectAS<T>(string UnsafeSQLWithASColumns, bool UseTmpFile = false) where T : new()
         {
-            if (!UnsafeSQLWithASColumns.StartsWith("SELECT ", StringComparison.InvariantCultureIgnoreCase))
+            if (!UnsafeSQLWithASColumns.StartsWith("SELECT ", StringComparison.OrdinalIgnoreCase))
                 throw new ArgumentException(string.Format(
                     "The argument '{0}' does not start with 'SELECT '", nameof(UnsafeSQLWithASColumns)));
 
-            var posFrom = UnsafeSQLWithASColumns.IndexOf("FROM", StringComparison.InvariantCultureIgnoreCase);
+            var posFrom = UnsafeSQLWithASColumns.IndexOf("FROM", StringComparison.OrdinalIgnoreCase);
             if(posFrom == -1)
                 throw new ArgumentException(string.Format(
                     "The argument '{0}' does not contain 'FROM'", nameof(UnsafeSQLWithASColumns)));
 
             var type = typeof(T);
-            var myType = Reflection.Instance.GetTypeInfo(type.FullName, type);            
+            var myType = Reflection.Instance.GetTypeInfo(type.FullName, type);
 
             // create key out of column data and from tables since we cache type info based on this data.
             //TODO: Should key be toUpperInvariant??
             string keySelect = null;
-            var posWhere = UnsafeSQLWithASColumns.IndexOf("WHERE", StringComparison.InvariantCultureIgnoreCase);
+            var posWhere = UnsafeSQLWithASColumns.IndexOf("WHERE", StringComparison.OrdinalIgnoreCase);
             if (posWhere != -1)
                 keySelect = myType.TypeName + UnsafeSQLWithASColumns.Substring(7, posWhere - 7);
             else
@@ -581,7 +581,7 @@ namespace Kraggs.TSM7.Data
 
                     foreach (var l in parts2)
                     {
-                        var posAs = l.LastIndexOf("AS", StringComparison.InvariantCultureIgnoreCase);
+                        var posAs = l.LastIndexOf("AS", StringComparison.OrdinalIgnoreCase);
 
                         var cname = l.Substring(posAs + 3);
                         if (cname[0] == '"') // this should never trigger because of bug in csv parser....

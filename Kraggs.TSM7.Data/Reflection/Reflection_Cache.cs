@@ -146,14 +146,19 @@ namespace Kraggs.TSM7.Data
                 var nullableType = Nullable.GetUnderlyingType(cT.MemberType);
 
 
-                if (!cT.MemberType.IsValueType || nullableType != null)
+                if (!cT.MemberType.GetTypeInfo().IsValueType || nullableType != null)
                 {
                     cT.IsNullable = true;
                 }
 
-                if(p.PropertyType.IsGenericType)
+                if(p.PropertyType.GetTypeInfo().IsGenericType)
                 {
-                    cT.DataType = GetTSMDataType(p.PropertyType.GetGenericArguments()[0]);
+                    //TODO: What is correct here? GenericTypeParameters OR GenericTypeArguments
+                    //var gtype = p.PropertyType.GetTypeInfo().GenericTypeParameters[0];
+                    var gtype = p.PropertyType.GetTypeInfo().GenericTypeArguments[0];
+                    cT.DataType = GetTSMDataType(gtype);
+
+                   //cT.DataType = GetTSMDataType(p.PropertyType.GetTypeInfo().GetGenericArguments()[0]);
                 }
                 else
                 {
@@ -180,7 +185,7 @@ namespace Kraggs.TSM7.Data
 
         internal static TSMDataType GetTSMDataType(Type t)
         {
-            if (t.IsEnum)
+            if (t.GetTypeInfo().IsEnum)
                 return TSMDataType.Enum;
             else if (t == typeof(String))
                 return TSMDataType.String;

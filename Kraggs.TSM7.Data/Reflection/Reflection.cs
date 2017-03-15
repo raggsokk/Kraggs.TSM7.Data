@@ -69,8 +69,12 @@ namespace Kraggs.TSM7.Data
             {
                 var dynMethod = new DynamicMethod(n, objType, Type.EmptyTypes);
                 var ilGen = dynMethod.GetILGenerator();
-                var ct = objTypeInfo.GetConstructor(Type.EmptyTypes)
-                    ?? objTypeInfo.GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, Type.EmptyTypes, null);
+
+                // Get the default constructor.
+                var ct = objTypeInfo.DeclaredConstructors.Where((x) => x.GetParameters().Length == 0).FirstOrDefault();
+
+                //var ct = objTypeInfo.GetConstructor(Type.EmptyTypes)
+                //    ?? objTypeInfo.GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, Type.EmptyTypes, null);
                 if (ct == null)
                     return null;
                 ilGen.Emit(OpCodes.Newobj, ct);
@@ -96,13 +100,15 @@ namespace Kraggs.TSM7.Data
         internal static GenericSetter CreateSetField(FieldInfo fieldInfo)
         {
             var type = fieldInfo.DeclaringType;
+            var typeInfo = type.GetTypeInfo();
+
             var arguments = new Type[2];
             arguments[0] = arguments[1] = typeof(object);
 
             var dynSet = new DynamicMethod(fieldInfo.Name, typeof(object), arguments, type, true);
             var ilGen = dynSet.GetILGenerator();
 
-            if (!type.IsClass)
+            if (!typeInfo.IsClass)
             {
                 var lv = ilGen.DeclareLocal(type);
                 ilGen.Emit(OpCodes.Ldarg_0);
@@ -110,7 +116,7 @@ namespace Kraggs.TSM7.Data
                 ilGen.Emit(OpCodes.Stloc_0);
                 ilGen.Emit(OpCodes.Ldloca_S, lv);
                 ilGen.Emit(OpCodes.Ldarg_1);
-                if (fieldInfo.FieldType.IsClass)
+                if (fieldInfo.FieldType.GetTypeInfo().IsClass)
                     ilGen.Emit(OpCodes.Castclass, fieldInfo.FieldType);
                 else
                     ilGen.Emit(OpCodes.Unbox_Any, fieldInfo.FieldType);
@@ -123,7 +129,7 @@ namespace Kraggs.TSM7.Data
             {
                 ilGen.Emit(OpCodes.Ldarg_0);
                 ilGen.Emit(OpCodes.Ldarg_1);
-                if (fieldInfo.FieldType.IsValueType)
+                if (fieldInfo.FieldType.GetTypeInfo().IsValueType)
                     ilGen.Emit(OpCodes.Unbox_Any, fieldInfo.FieldType);
                 ilGen.Emit(OpCodes.Stfld, fieldInfo);
                 ilGen.Emit(OpCodes.Ldarg_0);
@@ -137,19 +143,22 @@ namespace Kraggs.TSM7.Data
             // apperantly getting private methods dont work later on.
             // so for now disable getting private properties.
             //var setMethod = propertyInfo.GetSetMethod(true);
-            var setMethod = propertyInfo.GetSetMethod();
+            //var setMethod = propertyInfo.GetSetMethod();
+            var setMethod = propertyInfo.SetMethod;
+
             if (setMethod == null)
                 return null;
 
             var type = propertyInfo.DeclaringType;
             var pt = propertyInfo.PropertyType;
+            var ptInfo = pt.GetTypeInfo();
             var arguments = new Type[2];
             arguments[0] = arguments[1] = typeof(object);
 
             var dynSet = new DynamicMethod(setMethod.Name, typeof(object), arguments);
             var ilGen = dynSet.GetILGenerator();
 
-            if (!type.IsClass)
+            if (!type.GetTypeInfo().IsClass)
             {
                 var lv = ilGen.DeclareLocal(type);
                 ilGen.Emit(OpCodes.Ldarg_0);
@@ -157,7 +166,7 @@ namespace Kraggs.TSM7.Data
                 ilGen.Emit(OpCodes.Stloc_0);
                 ilGen.Emit(OpCodes.Ldloca_S, lv);
                 ilGen.Emit(OpCodes.Ldarg_1);
-                if (pt.IsClass)
+                if (ptInfo.IsClass)
                     ilGen.Emit(OpCodes.Castclass, pt);
                 else
                     ilGen.Emit(OpCodes.Unbox_Any, pt);
@@ -170,7 +179,7 @@ namespace Kraggs.TSM7.Data
                 if (setMethod.IsStatic)
                 {
                     ilGen.Emit(OpCodes.Ldarg_1);
-                    if (pt.IsClass)
+                    if (ptInfo.IsClass)
                         ilGen.Emit(OpCodes.Castclass, pt);
                     else
                         ilGen.Emit(OpCodes.Unbox_Any, pt);
@@ -181,7 +190,7 @@ namespace Kraggs.TSM7.Data
                     ilGen.Emit(OpCodes.Ldarg_0);
                     ilGen.Emit(OpCodes.Castclass, type);
                     ilGen.Emit(OpCodes.Ldarg_1);
-                    if (pt.IsClass)
+                    if (ptInfo.IsClass)
                         ilGen.Emit(OpCodes.Castclass, pt);
                     else
                         ilGen.Emit(OpCodes.Unbox_Any, pt);
